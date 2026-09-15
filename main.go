@@ -37,7 +37,6 @@ type server struct {
 	quit     chan struct{}
 	quitOnce sync.Once
 	show     func()        // brings the app window up; see tray.go
-	hide     func()        // closes the window, leaving Schedule in the tray
 	alert    alert         // a deadline close-out waiting for the page; see deadline.go
 	recheck  chan struct{} // prods the deadline watcher after a settings change
 
@@ -105,7 +104,6 @@ func main() {
 	}
 	win := &window{url: url}
 	s.show = win.show
-	s.hide = win.close
 	s.stopping = win.stopping
 	s.windowOpen = win.open
 	// -noui: no window, no tray, no notifications; the server alone, for tests.
@@ -308,11 +306,14 @@ func startedAtLogin() bool {
 
 // wantsBrowser reports whether the user asked for a plain browser tab instead
 // of the app window, with "schedule.exe -browser".
-func wantsBrowser() bool { return hasArg("browser") }
-
-// wantsWindowed reports whether the user asked for an ordinary framed window
-// rather than the fullscreen one, with "schedule.exe -windowed".
-func wantsWindowed() bool { return hasArg("windowed") }
+func wantsBrowser() bool {
+	for _, a := range os.Args[1:] {
+		if a == "-browser" || a == "--browser" {
+			return true
+		}
+	}
+	return false
+}
 
 // chromePaths lists where a Chromium-based browser usually lives. Edge ships
 // with Windows 11, so on that platform there is nearly always a hit.
@@ -359,12 +360,10 @@ func findChrome() string {
 }
 
 // openUI puts Schedule on screen. Preferred: a Chromium browser in --app mode,
-// which is a plain window with no tabs and no address bar, opened fullscreen
-// so there is no title bar either: just the board, edge to edge. F11 drops
-// it to an ordinary window and back; -windowed starts it that way. The
-// returned command is that window, and closing it should stop the program;
-// nil means we fell back to the default browser and there is no window to
-// watch.
+// which is a plain window with no tabs, no address bar and its own taskbar
+// entry, so it reads as a desktop app rather than a web page. The returned
+// command is that window, and closing it should stop the program; nil means we
+// fell back to the default browser and there is no window to watch.
 func openUI(url string) *exec.Cmd {
 	if wantsBrowser() {
 		openInBrowser(url)
@@ -372,18 +371,14 @@ func openUI(url string) *exec.Cmd {
 	}
 	if chrome := findChrome(); chrome != "" {
 		profile := filepath.Join(appDir, "window")
-		args := []string{
-			"--app=" + url,
-			"--user-data-dir=" + profile,
+		cmd := exec.Command(chrome,
+			"--app="+url,
+			"--user-data-dir="+profile,
 			"--window-size=1280,860",
 			"--no-first-run",
 			"--no-default-browser-check",
 			"--disable-features=Translate,MediaRouter",
-		}
-		if !wantsWindowed() {
-			args = append(args, "--start-fullscreen")
-		}
-		cmd := exec.Command(chrome, args...)
+		)
 		if err := cmd.Start(); err == nil {
 			return cmd
 		} else {
@@ -445,7 +440,6 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("/api/prefs", s.prefsHandler)
 	mux.HandleFunc("/api/carry", s.carryHandler)
 	mux.HandleFunc("/api/quit", s.quitHandler)
-	mux.HandleFunc("/api/hide", s.hideHandler)
 	mux.HandleFunc("/api/show", s.showHandler)
 	mux.HandleFunc("/api/alert", s.alertHandler)
 	mux.HandleFunc("/api/info", s.infoHandler)
@@ -920,20 +914,6 @@ func trayHint(dir string) {
 			"or right-click it and choose Quit.") {
 		os.WriteFile(marker, nil, 0o644)
 	}
-}
-
-// hideHandler closes the window and leaves Schedule in the tray - the same
-// as closing it, which a fullscreen window has no button for.
-func (s *server) hideHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", "POST")
-		fail(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-	if s.hide != nil {
-		go s.hide()
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 // showHandler is how a second start of Schedule hands over to this one: it

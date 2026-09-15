@@ -72,7 +72,7 @@ somewhere Schedule can fetch them over https — a GitHub release, a static
 site, a shared folder served by a web server. `./build.sh installer` writes
 `latest.json` next to the setup, ready to upload:
 
-    {"version": "2.8", "file": "Schedule-Setup.exe", "sha256": "…", "notes": "What changed"}
+    {"version": "2.7", "file": "Schedule-Setup.exe", "sha256": "…", "notes": "What changed"}
 
 `file` is resolved relative to where `latest.json` lives. `sha256` is the
 setup's digest: the download is checked against it before it is run, and a
@@ -299,18 +299,14 @@ it: with 23:00 and a 22:00 deadline, it is 22:00 on the same day.
 1. Copy `schedule.exe` to the Windows machine — anywhere you like, the Desktop
    is fine. It needs no installer and writes nothing next to itself.
 2. Double-click it.
-3. Schedule opens **fullscreen** — no tabs, no address bar, no title bar,
-   just the board edge to edge. <kbd>F11</kbd> drops it to an ordinary window
-   and back; `schedule.exe -windowed` starts it that way. There is no
-   console window behind it.
+3. Schedule opens in **its own window** — no tabs, no address bar, its own
+   taskbar entry. There is no console window behind it.
 4. Its icon sits in the notification area, beside the clock — under the **^**
    arrow until you drag it out onto the taskbar. Closing the window leaves
    Schedule running there — the first time, a notification says so:
    - **Click the icon** to open the window again.
    - **Right-click it** and choose **Quit** to stop Schedule.
-   - The **⌄** button in the top right of the app hides the window the same
-     way (a fullscreen window has no close button); the power button next to
-     it quits.
+   - The power button in the top right of the app also quits.
 
    Starting Schedule again from the Start menu while it is in the tray just
    brings the window back rather than starting a second copy.
@@ -538,7 +534,6 @@ be before `date`. Its `category` is the `id` of the row it sits in.
 ## Command line
 
     schedule.exe                      open in its own app window (default)
-    schedule.exe -windowed            an ordinary framed window instead of fullscreen
     schedule.exe -browser             open in your default browser instead
     schedule.exe -data "<path>"       keep tasks in this file instead
     schedule.exe -mongo "<uri>"       keep tasks in a MongoDB server instead
