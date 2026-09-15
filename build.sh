@@ -20,20 +20,20 @@ case "${1:-windows}" in
     ;;
   windows)
     CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
-      go build -trimpath -ldflags="-s -w -H windowsgui -X main.version=${VERSION:-2.4} -X main.defaultUpdateURL=${UPDATE_URL:-https://github.com/denniskramer-spec/schedule/releases/latest/download/latest.json}" -o schedule.exe .
+      go build -trimpath -ldflags="-s -w -H windowsgui -X main.version=${VERSION:-2.5} -X main.defaultUpdateURL=${UPDATE_URL:-https://github.com/denniskramer-spec/schedule/releases/latest/download/latest.json}" -o schedule.exe .
     ls -lh schedule.exe
     ;;
   installer)
     "$0" windows
     cp schedule.exe installer/payload/schedule.exe
     CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
-      go build -trimpath -ldflags="-s -w -H windowsgui -X main.version=${VERSION:-2.4}" \
+      go build -trimpath -ldflags="-s -w -H windowsgui -X main.version=${VERSION:-2.5}" \
       -o Schedule-Setup.exe ./installer/
     # What the app's update check reads; upload it next to Schedule-Setup.exe.
     # The sha256 is what the app checks the download against before running it.
     sum=$(sha256sum Schedule-Setup.exe | cut -d' ' -f1)
     printf '{"version": "%s", "file": "Schedule-Setup.exe", "sha256": "%s", "notes": "%s"}\n' \
-      "${VERSION:-2.4}" "$sum" "${NOTES:-}" > latest.json
+      "${VERSION:-2.5}" "$sum" "${NOTES:-}" > latest.json
     ls -lh Schedule-Setup.exe latest.json
     ;;
   icons)
@@ -42,11 +42,11 @@ case "${1:-windows}" in
     winres="go run github.com/tc-hib/go-winres@v0.3.3"
     $winres simply --arch amd64,arm64 --manifest gui --icon icon.ico \
       --product-name Schedule --file-description Schedule \
-      --product-version "${VERSION:-2.4}" --file-version "${VERSION:-2.4}" \
+      --product-version "${VERSION:-2.5}" --file-version "${VERSION:-2.5}" \
       --original-filename schedule.exe --out rsrc
     (cd installer && $winres simply --arch amd64,arm64 --manifest gui --icon ../icon.ico \
       --product-name Schedule --file-description "Schedule Setup" \
-      --product-version "${VERSION:-2.4}" --file-version "${VERSION:-2.4}" \
+      --product-version "${VERSION:-2.5}" --file-version "${VERSION:-2.5}" \
       --original-filename Schedule-Setup.exe --out rsrc)
     ls rsrc_*.syso installer/rsrc_*.syso
     ;;
