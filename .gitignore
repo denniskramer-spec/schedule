@@ -1,0 +1,6 @@
+# Build output: published as release assets, not committed.
+schedule.exe
+Schedule-Setup.exe
+latest.json
+installer/payload/schedule.exe
+schedule-arm64.exe

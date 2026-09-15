@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schedule</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root{
+    --bg:#eceef3; --panel:#ffffff; --rail:#f6f7fa;
+    --ink:#1b1e26; --ink2:#5c6274; --ink3:#8b91a2;
+    --line:#dde1e9; --line2:#c8cede;
+    --accent:#3f4d9e; --accent2:#35408a; --accent-soft:#e7eaf7; --radius:7px;
+    --field:#ffffff; --soft:#fafbfd; --hover:#eef0f5; --hover2:#f3f5fa; --needbg:#fffafa;
+    --danger:#a32d2d; --shadow:rgba(15,20,40,.28);
+    color-scheme:light;
+  }
+  /* Dark follows Windows' own setting (Settings > Personalisation > Colours). */
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#14161c; --panel:#1c1f27; --rail:#232733;
+      --ink:#e6e8ef; --ink2:#a9afc0; --ink3:#7d8496;
+      --line:#2c313d; --line2:#3a404e;
+      --accent:#8d9bff; --accent2:#a3aeff; --accent-soft:#2a3052;
+      --field:#161920; --soft:#20242d; --hover:#282d39; --hover2:#252a35; --needbg:#2d1f22;
+      --danger:#f08c8c; --shadow:rgba(0,0,0,.55);
+      color-scheme:dark;
+    }
+    .btn.primary,.addbtn{color:#10131c}
+    .card .agent,.card .carry,.card .span,.card .badge{background:rgba(255,255,255,.12)}
+    .mcell.today .mnum{color:#10131c}
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;overflow:hidden}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  input,textarea,select{font:inherit;color:inherit}
+
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 232px;gap:10px;height:100vh;padding:10px}
+
+  .spacer{flex:1}
+  .datepick{flex:none;height:30px;padding:0 9px;border:1px solid var(--line2);
+    border-radius:var(--radius);background:var(--field);color:var(--ink);font-size:12.8px;
+    outline:none;font-variant-numeric:tabular-nums}
+  .datepick:hover{border-color:var(--accent)}
+  .datepick:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .datepick::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.55}
+  .searchbox{width:190px}
+  .searchbox::-webkit-search-cancel-button{cursor:pointer}
+  .datepick:hover::-webkit-calendar-picker-indicator{opacity:1}
+  .segs{display:inline-flex;border:1px solid var(--line2);border-radius:var(--radius);
+    overflow:hidden;flex:none}
+  .segs button{padding:5px 11px;font-size:12.5px;color:var(--ink2);border-right:1px solid var(--line2)}
+  .segs button:last-child{border-right:0}
+  .segs button:hover{background:var(--hover)}
+  .segs button[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .iconbtn{width:30px;height:30px;border:1px solid var(--line2);border-radius:var(--radius);
+    display:grid;place-items:center;color:var(--ink2);flex:none}
+  .iconbtn:hover{background:var(--hover);color:var(--accent);border-color:var(--accent)}
+  .iconbtn svg{width:15px;height:15px;display:block}
+  .main{background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;
+    flex-direction:column;overflow:hidden;min-width:0}
+  .topbar{display:flex;align-items:center;gap:9px;padding:11px 12px;border-bottom:1px solid var(--line)}
+  .datenav{display:flex;align-items:center;gap:4px}
+  .stepbtn{width:28px;height:28px;border-radius:var(--radius);color:var(--ink2);display:grid;
+    place-items:center;font-size:16px;line-height:1}
+  .stepbtn:hover{background:var(--hover)}
+  .todaybtn{padding:5px 11px;border:1px solid var(--line2);border-radius:var(--radius);
+    font-size:12.5px;color:var(--ink2)}
+  .todaybtn:hover{background:var(--hover)}
+  .dateline{min-width:0}
+  .dateline h1{font-size:16px;font-weight:600;letter-spacing:-.005em;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .dateline p{font-size:12px;color:var(--ink3);margin-top:1px}
+
+  .composer{display:flex;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--soft)}
+  .composer input{flex:1;min-width:0;height:33px;padding:0 11px;border:1px solid var(--line2);
+    border-radius:var(--radius);background:var(--field);outline:none}
+  .composer input::placeholder{color:var(--ink3)}
+  .composer input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .composer .datepick{height:33px;flex:none;width:132px}
+  .spanto{color:var(--ink3);font-size:12px;flex:none}
+  .addbtn{padding:0 16px;height:33px;border-radius:var(--radius);background:var(--accent);
+    color:#fff;font-size:13px;font-weight:500}
+  .addbtn:hover{background:var(--accent2)}
+  .err{padding:0 14px;font-size:12px;color:#a32d2d;height:0;overflow:hidden;transition:height .12s}
+  .err.info{color:var(--ink2)}
+  .err.on{height:24px;padding-top:5px}
+
+  .stage{position:relative;flex:1;min-height:0;overflow:auto}
+  /* Rows take the height of what is in them; no gaps, so the space below the
+     last row is plain panel rather than grid lines. */
+  .board,.weekgrid{display:grid;gap:0;background:var(--panel);align-content:start}
+  .board{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .board>.colhead{background:var(--panel);z-index:2;border-bottom:1px solid var(--line)}
+  .board .col,.weekgrid .weekday{min-height:74px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .board .col.end,.weekgrid .weekday.end,.board>.colhead.end{border-right:0}
+  .board>.colhead{border-right:1px solid var(--line)}
+  .board .drop,.weekgrid .drop{padding-top:8px}
+  .lane{border-bottom:1px solid var(--line)}
+  .lane{grid-column:1/-1;display:flex;align-items:baseline;gap:8px;padding:6px 11px;
+    background:var(--rail);font-size:12px;font-weight:600;color:var(--ink2)}
+  .card .cat{display:block;font-size:10.5px;opacity:.7;margin-bottom:1px}
+  .row.catsrow{display:block}
+  .catlist{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+  .catline{display:flex;gap:5px;align-items:center}
+  .catline input{flex:1}
+  .catdel{width:28px;height:28px;border-radius:var(--radius);color:var(--ink3);font-size:15px;line-height:1;flex:none}
+  .catdel:hover{background:var(--needbg);color:var(--danger)}
+  .catdel:disabled{opacity:.3;pointer-events:none}
+  .catadd{margin-top:7px;padding:5px 11px;font-size:12.5px}
+  .btns{display:flex;gap:6px;flex:none;margin-left:12px}
+  #reveal{flex:none;margin-left:12px;white-space:nowrap;padding:5px 10px;font-size:12.5px}
+  .btns .btn{padding:5px 10px;font-size:12.5px;white-space:nowrap}
+  .catlist input{height:28px;padding:0 8px;border:1px solid var(--line2);border-radius:var(--radius);
+    font-size:12.5px;outline:none;background:var(--field);color:var(--ink)}
+  .wname .agent,.tip .agent,.agentitem .agent{display:inline-block;font-size:10px;font-weight:600;
+    padding:1px 5px;border-radius:4px;background:var(--hover);margin-right:5px;vertical-align:1px}
+  .cats input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .col{background:var(--panel);display:flex;flex-direction:column;min-width:0;transition:background .1s}
+  .col.over{background:var(--hover2)}
+  .colhead{display:flex;align-items:baseline;justify-content:space-between;gap:6px;
+    padding:10px 11px 8px;position:sticky;top:0;background:inherit}
+  .colhead span:first-child{font-size:12.5px;font-weight:600}
+  .count{font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .drop{flex:1;padding:0 8px 10px;display:flex;flex-direction:column;gap:5px}
+  .empty{font-size:12px;color:var(--ink3);padding:6px 3px}
+
+  .card{border-radius:var(--radius);padding:8px 10px;font-size:12.8px;line-height:1.4;
+    cursor:grab;touch-action:none;user-select:none;position:relative;
+    border-left:3px solid transparent;word-break:break-word}
+  .card:active{cursor:grabbing}
+  .card .ttl{display:block;padding-right:14px}
+  .card .note{display:block;margin-top:4px;font-size:11.5px;opacity:.72;line-height:1.35;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .clip{position:absolute;top:7px;right:7px;font-size:11px;opacity:.55}
+  .card .agent{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.02em;
+    padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.09);margin-right:5px;
+    vertical-align:1px}
+  .card .carry,.card .span{display:inline-block;font-size:10px;font-weight:600;
+    padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.09);margin-right:5px;
+    vertical-align:1px;font-variant-numeric:tabular-nums}
+  .card .span.need{background:rgba(226,75,74,.26)}
+  .agentbox{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink2);
+    white-space:nowrap;padding:0 2px}
+  .agentbox input{width:15px;height:15px;accent-color:var(--accent)}
+  .ghost{border-radius:var(--radius);background:var(--hover);border:1px dashed var(--line2)}
+  .flying{position:absolute;z-index:40;box-shadow:0 8px 20px rgba(20,25,45,.18);cursor:grabbing}
+
+  .side{display:grid;grid-template-rows:2fr 8fr;gap:10px;min-width:0;min-height:0}
+  .pane{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;
+    display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .pane h2{font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:10px}
+  .seg{font-size:11.5px;font-weight:600;color:var(--ink3);margin-bottom:7px;
+    display:flex;justify-content:space-between;align-items:baseline}
+  .seg .n{font-variant-numeric:tabular-nums;font-weight:400}
+  .split{border:0;border-top:1px solid var(--line);margin:13px 0 11px}
+  .savebtn{margin-top:11px;flex:none;width:100%;padding:8px 0;border:1px solid var(--line2);
+    border-radius:var(--radius);font-size:12.8px;color:var(--ink2);background:var(--soft)}
+  .savebtn:hover{background:var(--hover);border-color:var(--accent);color:var(--accent)}
+  .donelist{display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0;flex:1}
+  .doneitem{display:flex;gap:7px;font-size:12.3px;color:var(--ink3);line-height:1.35}
+  .doneitem s{text-decoration-color:var(--line2)}
+  .doneitem em{display:block;font-style:normal;font-size:11.3px;color:var(--ink3);opacity:.85;margin-top:2px}
+  .tick{color:#1d9e75;flex:none;font-size:12px;line-height:1.5}
+  .paneempty{font-size:12px;color:var(--ink3)}
+  .agentitem{display:flex;gap:7px;align-items:flex-start;font-size:12.4px;line-height:1.35;
+    padding:5px 6px;border-radius:var(--radius);cursor:pointer}
+  .agentitem:hover{background:var(--hover2)}
+  .agentitem .pip{width:7px;height:7px;border-radius:50%;flex:none;margin-top:5px}
+  .agentitem em{display:block;font-style:normal;font-size:11.3px;color:var(--ink3);margin-top:2px}
+
+  .weekgrid{grid-template-columns:repeat(7,minmax(0,1fr))}
+  .weekgrid .wdh{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .weekgrid .wdh.end{border-right:0}
+  .weekgrid .wdh.today{color:var(--accent)}
+  .weekday{background:var(--panel);display:flex;flex-direction:column;min-width:0}
+  .weekday.over{background:var(--hover2)}
+  .weekday.today .wdh{color:var(--accent)}
+  .wdh{padding:9px 8px 7px;font-size:12px;font-weight:600;text-align:center;cursor:pointer}
+  .wdh small{display:block;font-weight:400;color:var(--ink3);font-size:11px}
+  .monthgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+    grid-auto-rows:minmax(64px,1fr);gap:1px;background:var(--line);min-height:100%}
+  .mcell{background:var(--panel);padding:6px 7px;cursor:pointer;min-width:0}
+  .mcell:hover{background:var(--hover2)}
+  .mcell.dim{color:var(--ink3);background:var(--soft)}
+  .mcell.today .mnum{background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;
+    display:grid;place-items:center}
+  .mnum{font-size:12px;font-variant-numeric:tabular-nums}
+  .dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+  .dot{width:6px;height:6px;border-radius:50%}
+  .mhead{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);
+    border-bottom:1px solid var(--line)}
+  .mhead div{background:var(--panel);text-align:center;font-size:11px;color:var(--ink3);padding:6px 0}
+
+  .tip{position:fixed;z-index:70;max-width:280px;background:var(--field);border:1px solid var(--line2);
+    border-radius:10px;padding:10px 12px;box-shadow:0 10px 28px rgba(18,24,45,.18);
+    pointer-events:none;display:none}
+  .tip.on{display:block}
+  .tip h4{font-size:12.5px;font-weight:600;margin-bottom:7px}
+  .tip .trow{display:flex;gap:7px;align-items:flex-start;font-size:12.2px;line-height:1.4;
+    padding:2px 0;color:var(--ink2)}
+  .tip .pip{width:7px;height:7px;border-radius:50%;flex:none;margin-top:5px}
+  .tip .st{color:var(--ink3);font-size:11.2px}
+  .tip .none{font-size:12px;color:var(--ink3)}
+  .scrim{position:fixed;inset:0;background:rgba(22,26,38,.42);display:none;place-items:center;z-index:80}
+  .scrim.on{display:grid}
+  .sheet{background:var(--panel);border-radius:12px;width:360px;padding:18px;
+    box-shadow:0 16px 44px rgba(15,20,40,.28)}
+  .sheet h3{font-size:15px;font-weight:600;margin-bottom:4px}
+  .sheet p.hint{font-size:12.8px;color:var(--ink2);margin-bottom:14px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--ink2);margin-bottom:5px}
+  .field input[type=text],.field textarea,.field select,.field input[type=date]{
+    width:100%;border:1px solid var(--line2);border-radius:var(--radius);padding:8px 10px;
+    background:var(--field);outline:none;font-size:13px}
+  .field textarea{min-height:84px;resize:vertical;line-height:1.5}
+  .field input:focus,.field textarea:focus,.field select:focus{
+    border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .timepick{flex:none;margin-left:12px;height:30px;padding:0 6px;border:1px solid var(--line2);
+    border-radius:var(--radius);background:var(--field);color:var(--ink);font-size:12.8px;
+    font-variant-numeric:tabular-nums;outline:none;cursor:pointer}
+  .timepick:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;
+    border-top:1px solid var(--line);font-size:13px}
+  .sheetfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px}
+  .btn{padding:7px 14px;border:1px solid var(--line2);border-radius:var(--radius);font-size:13px}
+  .btn:hover{background:var(--hover)}
+  .btn.danger{color:var(--danger);border-color:var(--line2)}
+  .btn.danger:hover{background:var(--needbg)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.primary:hover{background:var(--accent2)}
+  .stamp{font-size:11.5px;color:var(--ink3)}
+  .sheet.wide{width:470px}
+  .hist{max-height:212px;overflow-y:auto;border:1px solid var(--line2);
+    border-radius:var(--radius);background:var(--soft);padding:3px}
+  .ev{display:flex;gap:8px;align-items:flex-start;padding:5px 6px;border-radius:5px;
+    font-size:12.4px;line-height:1.4}
+  .ev+.ev{border-top:1px solid var(--line)}
+  .ev:hover{background:var(--field)}
+  .evday{flex:none;width:76px;padding-top:1px;color:var(--ink3);font-size:11.4px}
+  .evtxt{flex:1;min-width:0;word-break:break-word;white-space:pre-wrap}
+  .ev.moved .evtxt em{font-style:normal;color:var(--ink3)}
+  .evnote{display:block;margin-top:2px;color:var(--ink)}
+  .evat{color:var(--ink3);font-size:11px;margin-left:6px;white-space:nowrap}
+  .evdel{flex:none;width:18px;height:18px;border-radius:4px;color:var(--ink3);
+    font-size:14px;line-height:1;opacity:0}
+  .ev:hover .evdel,.evdel:focus-visible{opacity:1}
+  .evdel:hover{background:#fcebeb;color:#a32d2d}
+  .histempty{font-size:12px;color:var(--ink3);padding:7px 6px;line-height:1.45}
+  .wrapup{max-height:300px;overflow-y:auto;margin-bottom:6px}
+  .wline{padding:9px 0;border-top:1px solid var(--line)}
+  .wline:first-child{border-top:0}
+  .wtop{display:flex;align-items:center;gap:8px}
+  .wnote{width:100%;margin-top:6px;border:1px solid var(--line2);border-radius:var(--radius);
+    padding:5px 8px;font-size:12.3px;background:var(--field);outline:none}
+  .wnote:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .wname{flex:1;min-width:0;font-size:13px;line-height:1.35;word-break:break-word}
+  .wname small{display:block;color:var(--ink3);font-size:11.3px}
+  .pick{padding:5px 10px;border:1px solid var(--line2);border-radius:var(--radius);
+    font-size:12px;white-space:nowrap}
+  .pick.d{color:#085041;border-color:#b9ddd0}
+  .pick.d:hover{background:#e1f5ee}
+  .pick.n{color:#791f1f;border-color:#e8c2c2}
+  .pick.n:hover{background:#fcebeb}
+  .pick.c{color:#633806;border-color:#e6cfa6}
+  .pick.c:hover{background:#faeeda}
+  .bulk{display:flex;gap:8px;margin-bottom:12px}
+  .bulk .btn{flex:1;text-align:center}
+  .wsec{font-size:11.5px;font-weight:600;color:var(--ink3);margin-top:13px;
+    padding-top:11px;border-top:1px solid var(--line)}
+  .wsec em{font-style:normal;font-weight:400}
+  .wsec b{color:#a32d2d}
+  .wnote.need{border-color:#e0b4b4;background:var(--needbg)}
+  .wday{color:var(--ink3);font-weight:400}
+  .btn:disabled{opacity:.45;pointer-events:none}
+  [hidden]{display:none!important}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+  /* ---- layout that holds up in a smaller window ---- */
+  .composer{flex-wrap:wrap}
+  .composer #newTask{flex:1 1 240px}
+  .composer .extras{display:flex;gap:7px;align-items:center;flex:none}
+  @media (max-width:1100px){
+    body{overflow:auto}
+    .app{grid-template-columns:minmax(0,1fr);height:auto;min-height:100vh}
+    .main{height:calc(100vh - 20px)}
+    .side{grid-template-rows:auto auto}
+    .pane{max-height:340px}
+    .searchbox{width:130px}
+  }
+
+  /* ---- board rows ---- */
+  .lane{cursor:pointer;user-select:none}
+  .lane:hover{color:var(--ink)}
+  .lane .chev{display:inline-block;width:10px;transition:transform .12s;color:var(--ink3)}
+  .lane.shut .chev{transform:rotate(-90deg)}
+  .lane .laneinfo{font-weight:400;color:var(--ink3)}
+  .stage.dragging .col,.stage.dragging .weekday{box-shadow:inset 0 0 0 1px var(--line2)}
+  .stage.dragging .col.over,.stage.dragging .weekday.over{box-shadow:inset 0 0 0 2px var(--accent)}
+  .card .badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;
+    background:rgba(0,0,0,.09);margin-right:5px;vertical-align:1px;font-variant-numeric:tabular-nums}
+  .card .badge.need{background:rgba(226,75,74,.26)}
+  .card:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .weekgrid .lane{grid-column:1/-1}
+  .weekgrid .wdh.sticky{position:sticky;top:0;z-index:2;background:var(--panel)}
+  .mtask{display:block;font-size:11px;line-height:1.35;margin-top:3px;padding:1px 5px;border-radius:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mmore{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px}
+
+  /* ---- side summary, undo bar, card menu ---- */
+  .sumgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+  .sum{border-radius:var(--radius);padding:7px 9px;font-size:11.5px;line-height:1.3}
+  .sum b{display:block;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:90;display:none;
+    align-items:center;gap:14px;background:var(--ink);color:var(--panel);border-radius:9px;
+    padding:9px 10px 9px 15px;font-size:13px;box-shadow:0 10px 28px var(--shadow)}
+  .toast.on{display:flex}
+  .toast button{color:var(--accent-soft);font-weight:600;padding:4px 9px;border-radius:6px}
+  @media (prefers-color-scheme:dark){ .toast button{color:#3f4d9e} }
+  .toast button:hover{background:rgba(127,127,127,.2)}
+  .menu{position:fixed;z-index:95;min-width:190px;background:var(--panel);border:1px solid var(--line2);
+    border-radius:9px;padding:5px;box-shadow:0 12px 30px var(--shadow);display:none;font-size:13px}
+  .menu.on{display:block}
+  .menu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 9px;border-radius:6px}
+  .menu button:hover,.menu button:focus-visible{background:var(--hover);outline:none}
+  .menu button[aria-checked="true"]{font-weight:600}
+  .menu .mpip{width:8px;height:8px;border-radius:50%;flex:none}
+  .menu .mkey{margin-left:auto;color:var(--ink3);font-size:11.5px}
+  .menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+  .menu .mhead2{font-size:11px;color:var(--ink3);padding:4px 9px 2px}
+  .menu .danger{color:var(--danger)}
+
+  /* ---- settings sections ---- */
+  .setsec{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);
+    margin:14px 0 2px}
+  .setsec:first-of-type{margin-top:4px}
+  .sheet.settings{width:430px;max-height:calc(100vh - 40px);overflow-y:auto}
+  .keys{font-size:12px;color:var(--ink2);line-height:1.8}
+  .keys kbd{font:inherit;font-size:11px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;
+    padding:0 5px;background:var(--soft);color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <main class="main">
+    <div class="topbar">
+      <div class="datenav">
+        <button class="stepbtn" id="prev" aria-label="Previous">&#8249;</button>
+        <button class="stepbtn" id="next" aria-label="Next">&#8250;</button>
+        <button class="todaybtn" id="today">Today</button>
+      </div>
+      <div class="dateline">
+        <h1 id="title">Today</h1>
+        <p id="subtitle"></p>
+      </div>
+      <div class="spacer"></div>
+      <input type="search" id="search" class="datepick searchbox" placeholder="Search tasks"
+        aria-label="Search tasks" title="Search by title, category or comment (/)" autocomplete="off">
+      <input type="date" id="jumpDate" class="datepick" aria-label="Jump to date">
+      <div class="spacer"></div>
+      <nav class="segs" id="views">
+        <button data-view="day" aria-current="true">Day</button>
+        <button data-view="week" aria-current="false">Week</button>
+        <button data-view="month" aria-current="false">Month</button>
+      </nav>
+      <button class="iconbtn" id="openSettings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <button class="iconbtn" id="doExit" title="Exit" aria-label="Exit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
+    </div>
+
+    <div class="composer">
+      <input id="newTask" type="text" placeholder="Review pull requests" autocomplete="off">
+      <input id="newStart" type="date" class="datepick" aria-label="First day" title="First day">
+      <span class="spanto" aria-hidden="true">&rarr;</span>
+      <input id="newEnd" type="date" class="datepick" aria-label="Last day"
+        title="Last day &#8212; leave it on the same day for a one-day task">
+      <span class="extras">
+        <select id="newRepeat" class="datepick" aria-label="Repeat" title="Repeat: once, every day, weekdays, every week or every month"></select>
+        <select id="newCat" class="datepick" aria-label="Category" title="Category"></select>
+        <label class="agentbox"><input type="checkbox" id="newAgent"> Agent</label>
+        <button class="addbtn" id="add">Add</button>
+      </span>
+    </div>
+    <div class="err" id="err">Type something first</div>
+
+    <div class="stage" id="stage"></div>
+  </main>
+
+  <aside class="side" id="side">
+    <section class="pane" id="agentPane">
+      <h2 id="agentTitle">Agent</h2>
+      <div class="donelist" id="agentBody"></div>
+    </section>
+    <section class="pane">
+      <h2 id="sideTitle">Finished today</h2>
+      <div class="donelist" id="sideBody"></div>
+      <button class="savebtn" id="saveTxt">Save as .txt</button>
+    </section>
+  </aside>
+
+</div>
+
+<div class="tip" id="tip" role="tooltip"></div>
+
+<div class="scrim" id="detail">
+  <div class="sheet wide" role="dialog" aria-modal="true" aria-label="Task detail">
+    <h3>Task</h3>
+    <p class="hint" id="dStamp"></p>
+    <div class="field">
+      <label for="dTitle">Title</label>
+      <input type="text" id="dTitle">
+    </div>
+    <div class="three">
+      <div class="field">
+        <label for="dStatus">Column</label>
+        <select id="dStatus"></select>
+      </div>
+      <div class="field">
+        <label for="dDate">First day</label>
+        <input type="date" id="dDate">
+      </div>
+      <div class="field">
+        <label for="dEnd">Last day</label>
+        <input type="date" id="dEnd">
+      </div>
+    </div>
+    <div class="three">
+      <div class="field">
+        <label for="dCat">Category</label>
+        <select id="dCat"></select>
+      </div>
+      <div class="field" id="dRepeatField">
+        <label for="dRepeat">Repeat</label>
+        <select id="dRepeat"></select>
+      </div>
+      <div class="field" style="align-self:end">
+        <label class="agentbox" style="padding:0 0 8px"><input type="checkbox" id="dAgent"> Agent task</label>
+      </div>
+    </div>
+    <p class="hint" id="dSeries" hidden></p>
+    <div class="field">
+      <label>History</label>
+      <div class="hist" id="dHist"></div>
+    </div>
+    <div class="field">
+      <label for="dNote" id="dNoteLabel">Add a comment for today</label>
+      <textarea id="dNote" placeholder="What happened, what is left, why it stalled"></textarea>
+    </div>
+    <div class="sheetfoot">
+      <button class="btn danger" id="dDelete">Delete</button>
+      <span>
+        <button class="btn" id="dCancel">Cancel</button>
+        <button class="btn primary" id="dSave">Save</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="wrap">
+  <div class="sheet wide" role="dialog" aria-modal="true" aria-label="End of day">
+    <h3 id="wTitle">Close out the day</h3>
+    <p class="hint" id="wHint"></p>
+    <div class="bulk" id="wBulk">
+      <button class="btn" id="wAllDone">All done</button>
+      <button class="btn" id="wAllNot">All not done</button>
+      <button class="btn" id="wAllCarry">Carry the rest</button>
+    </div>
+    <div class="wrapup" id="wList"></div>
+    <div id="wRunWrap" hidden>
+      <p class="wsec" id="wRunHead">Still running</p>
+      <div class="wrapup" id="wRun"></div>
+    </div>
+    <div class="sheetfoot"><span class="stamp" id="wFoot"></span>
+      <span>
+        <button class="btn" id="wLater" title="Save what you have written and finish this later">Later</button>
+        <button class="btn primary" id="wClose">Close</button>
+      </span></div>
+  </div>
+</div>
+
+<div class="scrim" id="settings">
+  <div class="sheet settings" role="dialog" aria-modal="true" aria-label="Settings">
+    <h3>Settings</h3>
+
+    <p class="setsec">Board</p>
+    <div class="row catsrow"><span>Categories<br>
+      <small class="stamp">The rows the board is divided into. Deleting one moves its tasks to the first.</small></span>
+      <div class="catlist" id="catList"></div>
+      <button class="btn catadd" id="catAdd">+ Add category</button></div>
+    <div class="row"><span>Ask for a comment on done and not done</span>
+      <input type="checkbox" id="optAsk"></div>
+    <div class="row"><span>Carry unfinished tasks to the next day<br>
+      <small class="stamp">Each move is kept in the task&#39;s history</small></span>
+      <input type="checkbox" id="optCarry"></div>
+
+    <p class="setsec">Time</p>
+    <div class="row"><span>Start of day<br>
+      <small class="stamp">Where one day ends and the next begins. A morning hour lets the day run late (06:00: 2&nbsp;AM still counts as the day before); an evening hour ends it early (23:00: 23:30 already counts as tomorrow)</small></span>
+      <select id="optDayStart" class="timepick" aria-label="Start of day"></select></div>
+    <div class="row"><span>Deadline<br>
+      <small class="stamp">A notification at this time to settle and comment on today&#39;s tasks, then a reminder every 30 minutes, up to three, while any are still open</small></span>
+      <select id="optDeadline" class="timepick" aria-label="Deadline"></select></div>
+
+    <p class="setsec">Keyboard</p>
+    <div class="keys">
+      <kbd>N</kbd> new task &nbsp; <kbd>T</kbd> today &nbsp; <kbd>D</kbd> <kbd>W</kbd> <kbd>M</kbd> day, week, month &nbsp;
+      <kbd>&larr;</kbd> <kbd>&rarr;</kbd> previous, next &nbsp; <kbd>/</kbd> search<br>
+      On a card: <kbd>Enter</kbd> open &nbsp; <kbd>1</kbd>&#8211;<kbd>4</kbd> column &nbsp;
+      <kbd>Del</kbd> delete &nbsp; right-click for more
+    </div>
+
+    <p class="setsec">Data</p>
+    <div class="row"><span><span id="statCount">0</span> tasks<br>
+      <small class="stamp" id="whereStored"></small></span>
+      <button class="btn" id="reveal" hidden title="Open the folder the data file is in. A backup is a copy of that file; the backups folder next to it keeps one copy a day for two weeks.">Show file</button></div>
+    <div class="row"><span>Backup<br>
+      <small class="stamp">Save every task and setting to a file, or bring a saved file back</small></span>
+      <span class="btns">
+        <button class="btn" id="exportBtn">Save backup&#8230;</button>
+        <button class="btn" id="importBtn">Restore&#8230;</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </span></div>
+    <div class="row"><span>Remove every task<br>
+      <small class="stamp">Cannot be undone</small></span>
+      <button class="btn danger" id="wipe">Clear data</button></div>
+
+    <p class="setsec">About</p>
+    <div class="row"><span>Schedule <span id="aboutVersion"></span><br>
+      <small class="stamp" id="updateStatus"></small></span>
+      <span class="btns">
+        <button class="btn primary" id="updateNow" hidden title="Install without waiting for the window to close">Update now</button>
+        <button class="btn" id="checkUpdate">Check for updates</button>
+      </span></div>
+
+    <div class="sheetfoot"><span></span><button class="btn primary" id="closeSettings">Done</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span>
+  <button id="toastUndo">Undo</button></div>
+
+<div class="menu" id="menu" role="menu"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var COLS = [
+    { key:"todo",    label:"To do",       bg:"#e6f1fb", fg:"#0c447c", bar:"#378add", dbg:"#1b3049", dfg:"#bcd8f6" },
+    { key:"doing",   label:"In progress", bg:"#faeeda", fg:"#633806", bar:"#ef9f27", dbg:"#3a2c14", dfg:"#f3d09b" },
+    { key:"done",    label:"Done",        bg:"#e1f5ee", fg:"#085041", bar:"#1d9e75", dbg:"#16372e", dfg:"#a9e4cd" },
+    { key:"notdone", label:"Not done",    bg:"#fcebeb", fg:"#791f1f", bar:"#e24b4a", dbg:"#40201f", dfg:"#f5b8b7" }
+  ];
+
+  /* Dark mode follows Windows. Card colours are drawn inline, so they are
+     picked here and the board redrawn when the setting flips. */
+  var darkMQ = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function tint(key){
+    var c=TINT[key], dark=darkMQ&&darkMQ.matches;
+    return { bg: dark?c.dbg:c.bg, fg: dark?c.dfg:c.fg, bar:c.bar, label:c.label };
+  }
+  var TINT = {};
+  COLS.forEach(function (c) { TINT[c.key] = c; });
+
+  var DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  var MONTHS = ["January","February","March","April","May","June","July","August",
+                "September","October","November","December"];
+
+  /* A task can repeat: the one you add is the head of a series, and the
+     server makes its later occurrences ahead of time as tasks of their own,
+     each carrying the head's id in `series`. Cards in a series wear the rule
+     as a badge; the sheet on the head is where the rule is changed. */
+  var REPEATS=[{key:"",label:"Once"},{key:"daily",label:"Every day",badge:"daily"},
+    {key:"weekdays",label:"Weekdays",badge:"weekdays"},{key:"weekly",label:"Every week",badge:"weekly"},
+    {key:"monthly",label:"Every month",badge:"monthly"}];
+  function repeatInfo(key){ return REPEATS.filter(function(r){ return r.key===key; })[0]; }
+  function fillRepeat(sel){
+    sel.innerHTML=REPEATS.map(function(r){ return '<option value="'+r.key+'">'+r.label+'</option>'; }).join("");
+  }
+  // The rule a task follows: its own, or its series head's.
+  function ruleOf(t){
+    if(t.repeat) return t.repeat;
+    if(!t.series) return "";
+    var h=find(t.series);
+    return h && h.repeat ? h.repeat : "repeat";
+  }
+  function ruleBadge(t){
+    var r=ruleOf(t); if(!r) return "";
+    var info=repeatInfo(r), text=info ? info.badge : "repeats";
+    var title=t.repeat ? "Repeats: "+info.label.toLowerCase()+". Open it to change the rule."
+      : "One of a repeating task's days";
+    return '<span class="badge" title="'+esc(title)+'">'+text+'</span>';
+  }
+  // The planned occurrences of a head that nobody has touched yet: still to
+  // do, no comment, after today. These follow the head's edits and go with
+  // it when it is deleted or its rule changes.
+  function futureUntouched(headId){
+    var t=todayIso();
+    return tasks.filter(function(x){
+      return x.series===headId && x.date>t && x.status==="todo" && !logOf(x).length;
+    });
+  }
+
+  // Categories have stable ids that tasks refer to; names and order are the user's.
+  var DEFAULT_CATS = [{id:0,name:"Job"},{id:1,name:"AI training"},{id:2,name:"Assets"}];
+  var MAX_CATS = 12;
+  var tasks = [], prefs = { ask:true, carry:false, deadline:"", categories:DEFAULT_CATS.slice() };
+
+  function cats(){ return prefs.categories && prefs.categories.length ? prefs.categories : DEFAULT_CATS; }
+  function catById(id){ return cats().filter(function(c){ return c.id===id; })[0]; }
+  // A task whose category no longer exists shows in the first row.
+  function catOf(t){ var id=t.category||0; return catById(id) ? id : cats()[0].id; }
+  function catName(id){ var c=catById(id); return c ? c.name : cats()[0].name; }
+
+  /* storage: the local Go server, not localStorage */
+
+  function req(method, path, body){
+    var opts = { method:method, headers:{} };
+    if(body!==undefined){
+      opts.headers["Content-Type"]="application/json";
+      opts.body=JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function(res){
+      // The alert poll's own number is what checkAlert compares against, so
+      // it must not move the mark itself.
+      if(path!=="/api/alert") noteRev(res.headers.get("X-Rev"));
+      if(!res.ok){
+        return res.json().catch(function(){return {};}).then(function(j){
+          var err=new Error(j.error || (method+" "+path+" failed: "+res.status));
+          err.status=res.status;
+          throw err;
+        });
+      }
+      return res.status===204 ? null : res.json();
+    });
+  }
+
+  var api = {
+    list:     function(){ return req("GET","/api/tasks"); },
+    create:   function(t){ return req("POST","/api/tasks",t); },
+    update:   function(t){ return req("PUT","/api/tasks/"+encodeURIComponent(t.id),t); },
+    remove:   function(id){ return req("DELETE","/api/tasks/"+encodeURIComponent(id)); },
+    wipe:     function(){ return req("DELETE","/api/tasks"); },
+    carry:    function(){ return req("POST","/api/carry"); },
+    getPrefs: function(){ return req("GET","/api/prefs"); },
+    putPrefs: function(){ return req("PUT","/api/prefs",{ask:!!prefs.ask,carry:!!prefs.carry,deadline:prefs.deadline||"",dayStart:prefs.dayStart||0,
+      categories:cats().map(function(c){ return {id:c.id,name:c.name}; })}); },
+    recategorize: function(ids,cat){ return req("POST","/api/recategorize",{ids:ids,category:cat}); },
+    alert:    function(){ return req("POST","/api/alert"); },
+    info:     function(){ return req("GET","/api/info"); },
+    quit:     function(){ return req("POST","/api/quit"); }
+  };
+
+  function showErr(msg){
+    errEl.textContent=msg; errEl.classList.remove("info"); errEl.classList.add("on");
+  }
+  function showInfo(msg){
+    errEl.textContent=msg; errEl.classList.add("on","info");
+  }
+  function clearErr(){ errEl.classList.remove("on","info"); }
+
+  /* Writes are optimistic: the array is already updated and drawn. If the
+     request fails, say so and pull the database back over the top. A 409
+     means the data file was changed by another program - a second machine
+     through a synced folder - and the server has re-read it; the board that
+     comes back is theirs, and the change just made is gone. */
+  var pending=0;   // writes in flight; a refresh waits for them
+  function push(promise){
+    pending++;
+    return promise.catch(function(e){
+      showErr(e && e.status===409 ? e.message : "Could not save \u2014 reloading from the database");
+      return api.list().then(function(rows){ tasks=rows; render(); })
+        .catch(function(){ showErr("Lost contact with the Schedule server"); });
+    }).then(function(v){ pending--; return v; }, function(e){ pending--; throw e; });
+  }
+
+  /* ---------- live refresh ----------
+
+     Every response carries X-Rev, the server's change number, and the alert
+     poll brings it too. When the poll's number is ahead of the last one seen
+     here, someone else changed the board - another window, another machine,
+     the data file arriving through a synced folder - and it is reloaded. This
+     page's own writes carry the new number in their responses, so they never
+     make it reload. */
+  var lastRev=0;
+  function noteRev(h){ var n=parseInt(h,10); if(n>lastRev) lastRev=n; }
+
+  var view = "day";
+  var cursor = new Date(); cursor.setHours(0,0,0,0);   // moved to todayIso() once prefs load
+
+  function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function parse(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2]);}
+  function shift(d,n){var c=new Date(d);c.setDate(c.getDate()+n);return c;}
+  /* "Today" turns over at the Start of day hour, not midnight. */
+  function todayIso(){
+    // Same rule as the server: a morning hour lets the day run late, an
+    // afternoon or evening hour ends it early.
+    var h=prefs.dayStart||0, move = h>=12 ? 24-h : -h;
+    var d=new Date(Date.now()+move*3600000);
+    d.setHours(0,0,0,0);
+    return iso(d);
+  }
+  function goToday(){ cursor=parse(todayIso()); }
+  function mondayOf(d){var c=new Date(d),w=(c.getDay()+6)%7;c.setDate(c.getDate()-w);return c;}
+  function nextDay(ds){return iso(shift(parse(ds),1));}
+  function dayLabel(ds){
+    if(ds===todayIso()) return "Today";
+    var d=parse(ds);
+    return DAYS[(d.getDay()+6)%7]+" "+d.getDate()+" "+MONTHS[d.getMonth()].slice(0,3);
+  }
+  /* Where a task carried off `ds` should land: the next day, unless that day
+     has already been and gone, in which case today. */
+  function carryDest(ds){var n=nextDay(ds),t=todayIso();return n<t?t:n;}
+
+  /* ---------- a task is a range of days ----------
+
+     date is the first day and end the last, inclusive. They are the same day
+     for the ordinary task, so there is no separate kind to reason about: a
+     one-day task is a range one day wide. */
+
+  function endOf(t){ return t.end || t.date; }
+  function spans(t){ return endOf(t) > t.date; }
+  function onDay(t,ds){ return t.date<=ds && ds<=endOf(t); }
+  function dueOn(t,ds){ return endOf(t)===ds; }
+  function open_(t){ return t.status==="todo"||t.status==="doing"; }
+  function dayCount(a,b){
+    // Local midnights, so a clock change makes one of these 23 or 25 hours.
+    return Math.round((parse(b)-parse(a))/86400000)+1;
+  }
+  function rangeLabel(t){
+    if(!spans(t)) return dayLabel(t.date);
+    return dayLabel(t.date)+" \u2013 "+dayLabel(endOf(t));
+  }
+  // Whether a running task still owes a line about the given day.
+  function needsComment(t,ds){
+    var l=logOf(t);
+    for(var i=0;i<l.length;i++)
+      if(l[i].kind==="note" && l[i].date===ds && (l[i].text||"").trim()) return false;
+    return true;
+  }
+
+  /* ---------- search ----------
+
+     The box in the top bar narrows every view to tasks whose title, category
+     or any comment contains the words typed, in any order. It only changes
+     what is drawn: the close-out sheet and carrying still see every task. */
+
+  var query="";
+  function words(){ return query.split(/\s+/).filter(Boolean); }
+  function matches(t){
+    var w=words(); if(!w.length) return true;
+    var hay=(t.title+" "+catName(catOf(t))+" "+logOf(t).map(function(e){ return e.text||""; }).join(" ")).toLowerCase();
+    for(var i=0;i<w.length;i++) if(hay.indexOf(w[i])<0) return false;
+    return true;
+  }
+  function shown(list){ return query ? list.filter(matches) : list; }
+
+  // Everything on the board that day, spanning tasks included.
+  function byDate(ds){return tasks.filter(function(t){return onDay(t,ds);});}
+  function find(id){return tasks.filter(function(t){return t.id===id;})[0];}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  var stage=document.getElementById("stage"), titleEl=document.getElementById("title"),
+      subEl=document.getElementById("subtitle"), errEl=document.getElementById("err"),
+      input=document.getElementById("newTask");
+
+  function heading(){
+    var t=todayIso();
+    document.getElementById("jumpDate").value=iso(cursor);
+    if(view==="day"){
+      var d=cursor, same=iso(d)===t;
+      titleEl.textContent = same ? "Today" :
+        DAYS[(d.getDay()+6)%7]+", "+d.getDate()+" "+MONTHS[d.getMonth()];
+      var list=shown(byDate(iso(d)));
+      var open=list.filter(function(x){return x.status==="todo"||x.status==="doing";}).length;
+      var when = same ? DAYS[(d.getDay()+6)%7]+" "+d.getDate()+" "+MONTHS[d.getMonth()] : "";
+      subEl.textContent = (list.length===0 ? (query ? "Nothing matches" : "Nothing planned") : open+" open of "+list.length)+
+        (when ? " \u00b7 "+when : "")+searchNote();
+    } else if(view==="week"){
+      var m=mondayOf(cursor), s=shift(m,6);
+      titleEl.textContent=m.getDate()+" "+MONTHS[m.getMonth()].slice(0,3)+
+        " to "+s.getDate()+" "+MONTHS[s.getMonth()].slice(0,3);
+      // Counted once each: a task running Monday to Friday is one task.
+      var n=shown(tasks.filter(inScope)).length;
+      subEl.textContent=n+(n===1?" task this week":" tasks this week")+searchNote();
+    } else {
+      titleEl.textContent=MONTHS[cursor.getMonth()]+" "+cursor.getFullYear();
+      var c=shown(tasks.filter(inScope)).length;
+      subEl.textContent=c+(c===1?" task this month":" tasks this month")+searchNote();
+    }
+    if(!spanTouched) resetSpan();
+  }
+
+  function searchNote(){ return query ? " \u00b7 matching \u201c"+query+"\u201d" : ""; }
+
+  function clock(d){
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
+
+  /* ---------- history ----------
+
+     A task keeps every comment ever written on it, each stamped with the day
+     it belongs to, plus a line each time it rolled over to a later day. That
+     is what the detail sheet reads back day by day. MAXLOG matches the cap the
+     server enforces. */
+
+  var MAXLOG = 500;
+
+  function logOf(t){ return t.log || (t.log = []); }
+
+  function entry(kind,date,text,from,status){
+    var now=new Date();
+    return {kind:kind, date:date, at:iso(now)+" "+clock(now),
+            text:(text||"").trim(), from:from||"", status:status||""};
+  }
+
+  function addLog(t,e){
+    var l=logOf(t);
+    l.push(e);
+    if(l.length>MAXLOG) t.log=l.slice(-MAXLOG);
+  }
+
+  // The most recent thing said about a task, for card and list previews.
+  function lastNote(t){
+    var l=logOf(t);
+    for(var i=l.length-1;i>=0;i--){
+      if(l[i].kind!=="note") continue;
+      var text=(l[i].text||"").trim();
+      if(text) return text;
+    }
+    return "";
+  }
+
+  function countKind(t,kind){
+    var l=logOf(t), n=0;
+    for(var i=0;i<l.length;i++) if(l[i].kind===kind) n++;
+    return n;
+  }
+
+  function stampFinish(t){
+    if(t.status==="done"||t.status==="notdone"){
+      var now=new Date();
+      t.finishedAt = iso(now)+" "+clock(now);
+    } else {
+      t.finishedAt = "";
+    }
+  }
+
+  /* A spanning task shows how far through its run this day is, and turns red
+     when that day has gone by without a word about it. */
+  function spanBadge(t,ds){
+    if(!spans(t)) return "";
+    var total=dayCount(t.date,endOf(t)), n=dayCount(t.date,ds);
+    var late=open_(t) && ds<=todayIso() && !dueOn(t,ds) && needsComment(t,ds);
+    return '<span class="badge'+(late?" need":"")+'" title="'+esc(rangeLabel(t))+
+      (late?" — no comment yet for this day":"")+'">day '+n+' of '+total+'</span>';
+  }
+
+  // Badges say what they mean in words; the last comment shows underneath.
+  function cardHtml(t,ds,withCat){
+    var c=tint(t.status);
+    var note=lastNote(t), days=countKind(t,"carry");
+    return '<div class="card" tabindex="0" data-id="'+t.id+'" aria-label="'+esc(t.title)+", "+c.label+'" '+
+      'style="background:'+c.bg+';color:'+c.fg+';border-left-color:'+c.bar+'">'+
+      (withCat?'<span class="cat">'+esc(catName(catOf(t)))+'</span>':'')+
+      '<span class="ttl">'+(t.agent?'<span class="agent">agent</span>':'')+
+      (days?'<span class="badge" title="Carried over to a later day '+days+' time'+(days===1?'':'s')+
+        '">carried '+days+'×</span>':'')+
+      ruleBadge(t)+
+      spanBadge(t,ds)+
+      esc(t.title)+'</span>'+
+      (note?'<span class="note" title="Latest comment">'+esc(note)+'</span>':'')+
+      '</div>';
+  }
+
+  /* Category rows can be folded away; which ones are folded is remembered in
+     this window only. */
+  var shut={};
+  try{ shut=JSON.parse(localStorage.getItem("schedule.shutRows")||"{}")||{}; }catch(e){ shut={}; }
+  function toggleRow(k){
+    shut[k]=!shut[k];
+    try{ localStorage.setItem("schedule.shutRows",JSON.stringify(shut)); }catch(e){}
+    render();
+  }
+  stage.addEventListener("click",function(e){
+    var lane=e.target.closest("[data-lane]");
+    if(lane) toggleRow(lane.getAttribute("data-lane"));
+  });
+
+  function laneHtml(k,items){
+    var info="";
+    if(shut[k] && items.length){
+      info=COLS.map(function(c){
+        var n=items.filter(function(t){return t.status===c.key;}).length;
+        return n ? n+" "+c.label.toLowerCase() : "";
+      }).filter(Boolean).join(" · ");
+    }
+    return '<div class="lane'+(shut[k]?" shut":"")+'" data-lane="'+k+'" role="button" tabindex="0" '+
+      'aria-expanded="'+(!shut[k])+'" title="'+(shut[k]?"Show":"Hide")+' this row">'+
+      '<span class="chev" aria-hidden="true">▾</span><span>'+esc(catName(k))+'</span>'+
+      '<span class="count">'+items.length+'</span>'+
+      (info?'<span class="laneinfo">'+esc(info)+'</span>':'')+'</div>';
+  }
+
+  /* The Day board: the four status columns across, one row per category
+     down. Each cell is its own drop zone, so dragging a card changes its
+     column, its category, or both. */
+  function renderDay(){
+    var ds=iso(cursor), day=shown(byDate(ds)), html='<div class="board">';
+    COLS.forEach(function(c,i){
+      var n=day.filter(function(t){return t.status===c.key;}).length;
+      html+='<div class="colhead'+(i===COLS.length-1?" end":"")+'"><span>'+c.label+'</span><span class="count">'+n+'</span></div>';
+    });
+    cats().forEach(function(cat){
+      var k=cat.id, inCat=day.filter(function(t){return catOf(t)===k;});
+      html+=laneHtml(k,inCat);
+      if(shut[k]) return;
+      COLS.forEach(function(c,i){
+        var items=inCat.filter(function(t){return t.status===c.key;});
+        html+='<section class="col'+(i===COLS.length-1?" end":"")+'" data-col="'+c.key+'" data-cat="'+k+'">'+
+          '<div class="drop">'+items.map(function(t){return cardHtml(t,ds);}).join("")+
+          '</div></section>';
+      });
+    });
+    stage.innerHTML=html+"</div>";
+  }
+
+  // The Week board has the same category rows, with the seven days across.
+  function renderWeek(){
+    var m=mondayOf(cursor), t=todayIso(), days=[], html='<div class="weekgrid">';
+    for(var i=0;i<7;i++){
+      var d=shift(m,i), ds=iso(d);
+      days.push(ds);
+      html+='<div class="wdh sticky'+(ds===t?" today":"")+(i===6?" end":"")+'" data-jump="'+ds+'">'+
+        DAYS[i]+'<small>'+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3)+'</small></div>';
+    }
+    cats().forEach(function(cat){
+      var k=cat.id, inCat=shown(tasks.filter(function(x){ return catOf(x)===k && inScope(x); }));
+      html+=laneHtml(k,inCat);
+      if(shut[k]) return;
+      days.forEach(function(ds,i){
+        var items=shown(byDate(ds)).filter(function(x){return catOf(x)===k;});
+        html+='<section class="weekday'+(ds===t?" today":"")+(i===6?" end":"")+'" data-col-date="'+ds+'" data-cat="'+k+'">'+
+          '<div class="drop">'+items.map(function(x){return cardHtml(x,ds);}).join("")+
+          '</div></section>';
+      });
+    });
+    stage.innerHTML=html+"</div>";
+  }
+
+  // Month cells name their first few tasks instead of showing bare dots.
+  function renderMonth(){
+    var first=new Date(cursor.getFullYear(),cursor.getMonth(),1);
+    var start=mondayOf(first), t=todayIso(), SHOW=3;
+    var html='<div class="mhead">'+DAYS.map(function(d){return "<div>"+d+"</div>";}).join("")+"</div>";
+    html+='<div class="monthgrid">';
+    for(var i=0;i<42;i++){
+      var d=shift(start,i), ds=iso(d), out=d.getMonth()!==cursor.getMonth(), items=shown(byDate(ds));
+      html+='<div class="mcell'+(out?" dim":"")+(ds===t?" today":"")+'" data-jump="'+ds+'">'+
+        '<div class="mnum">'+d.getDate()+"</div>"+
+        items.slice(0,SHOW).map(function(x){
+          var c=tint(x.status);
+          return '<span class="mtask" style="background:'+c.bg+';color:'+c.fg+'">'+esc(x.title)+'</span>';
+        }).join("")+
+        (items.length>SHOW?'<span class="mmore">+'+(items.length-SHOW)+' more</span>':'')+
+        "</div>";
+    }
+    stage.innerHTML=html+"</div>";
+  }
+
+  function scopeLabel(){
+    if(view==="day") return iso(cursor)===todayIso() ? "Finished today"
+      : "Finished on "+iso(cursor);
+    if(view==="week") return "Finished this week";
+    return "Finished this month";
+  }
+
+  // In scope when the task's range touches the period on screen.
+  function inScope(t){
+    if(view==="day") return onDay(t,iso(cursor));
+    var from,to;
+    if(view==="week"){
+      from=iso(mondayOf(cursor)); to=iso(shift(mondayOf(cursor),6));
+    } else {
+      from=iso(new Date(cursor.getFullYear(),cursor.getMonth(),1));
+      to=iso(new Date(cursor.getFullYear(),cursor.getMonth()+1,0));
+    }
+    return t.date<=to && endOf(t)>=from;
+  }
+
+  function scoped(status){
+    return shown(tasks.filter(function(t){return t.status===status && inScope(t);}))
+      .sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
+  }
+
+  function itemHtml(t,mark,colour){
+    var n=lastNote(t);
+    var when = view==="day" ? "" :
+      ' <span style="opacity:.7">'+esc(rangeLabel(t))+'</span>';
+    var fin = t.finishedAt ? ' <span style="opacity:.7">'+t.finishedAt.slice(11)+'</span>' : '';
+    return '<div class="doneitem"><span class="tick" style="color:'+colour+'">'+mark+'</span>'+
+      '<span><s>'+esc(t.title)+'</s>'+when+fin+(n?'<em>'+esc(n)+'</em>':'')+'</span></div>';
+  }
+
+  function renderAgent(){
+    var open=shown(tasks.filter(function(t){
+      return t.agent && inScope(t) && (t.status==="todo"||t.status==="doing");
+    })).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
+
+    // Only there when there is something in it.
+    document.getElementById("agentPane").hidden = !open.length;
+    document.getElementById("side").style.gridTemplateRows = open.length ? "" : "minmax(0,1fr)";
+    document.getElementById("agentTitle").textContent = "Agent  ·  " + open.length + " open";
+
+    document.getElementById("agentBody").innerHTML = open.map(function(t){
+      var n=lastNote(t);
+      var when = view==="day" ? "" : ' <span style="color:var(--ink3)">'+esc(rangeLabel(t))+'</span>';
+      return '<div class="agentitem" data-open="'+t.id+'">'+
+        '<span class="pip" style="background:'+tint(t.status).bar+'"></span>'+
+        '<span>'+esc(t.title)+when+(n?'<em>'+esc(n)+'</em>':'')+'</span></div>';
+    }).join("");
+  }
+
+  /* The Day board already lists everything by column, so on that view the
+     side panel sums the day up and shows what was written about it instead
+     of repeating the Done and Not done columns. Week and Month have no
+     columns, so there it lists what was finished. */
+  function renderSide(){
+    renderAgent();
+    document.getElementById("sideTitle").textContent=scopeLabel();
+    var html="";
+    if(view==="day"){
+      var ds=iso(cursor), day=shown(byDate(ds));
+      document.getElementById("sideTitle").textContent = ds===todayIso() ? "Today at a glance" : dayLabel(ds);
+      html+='<div class="sumgrid">'+COLS.map(function(c){
+        var n=day.filter(function(t){return t.status===c.key;}).length, k=tint(c.key);
+        return '<div class="sum" style="background:'+k.bg+';color:'+k.fg+'"><b>'+n+'</b>'+c.label+'</div>';
+      }).join("")+'</div>';
+      var notes=[];
+      day.forEach(function(t){
+        logOf(t).forEach(function(e){
+          if(e.kind==="note" && e.date===ds && (e.text||"").trim()) notes.push({t:t,e:e});
+        });
+      });
+      notes.sort(function(a,b){ return (a.e.at||"")<(b.e.at||"")?1:-1; });
+      html+='<div class="seg"><span>Comments</span><span class="n">'+notes.length+'</span></div>';
+      html+= notes.length ? notes.map(function(x){
+        return '<div class="agentitem" data-open="'+x.t.id+'">'+
+          '<span class="pip" style="background:'+tint(x.t.status).bar+'"></span>'+
+          '<span>'+esc(x.t.title)+'<em>'+esc(x.e.text)+
+          ((x.e.at||"").length>11?' · '+esc(x.e.at.slice(11)):'')+'</em></span></div>';
+      }).join("") : '<p class="paneempty">Nothing written about this day yet.</p>';
+    } else {
+      var done=scoped("done"), not=scoped("notdone");
+      html+='<div class="seg"><span>Done</span><span class="n">'+done.length+'</span></div>';
+      html += done.length ? done.map(function(t){return itemHtml(t,"✓","#1d9e75");}).join("")
+        : '<p class="paneempty">Nothing finished yet.</p>';
+      html += '<hr class="split">';
+      html += '<div class="seg"><span>Not done</span><span class="n">'+not.length+'</span></div>';
+      html += not.length ? not.map(function(t){return itemHtml(t,"✕","#e24b4a");}).join("")
+        : '<p class="paneempty">Nothing marked not done.</p>';
+    }
+    document.getElementById("sideBody").innerHTML=html;
+  }
+
+  /* ---------- the .txt report ----------
+
+     One block per day, in the shape
+
+         9/10 Report
+
+          -Bid 221 Done
+          -Call status(1 final call done, 1 rescheduled)
+         =================================================
+         9/11  Todo
+
+          -Continue 300 Bid
+
+     Report lists what happened that day: every task settled on it, and every
+     running task that got a line about it, the comment in brackets. Todo is
+     the day after the last one shown: what is planned for it, plus whatever
+     is still open and about to carry onto it. */
+
+  var SEP="=================================================";
+
+  function mdy(ds){ var d=parse(ds); return (d.getMonth()+1)+"/"+d.getDate(); }
+
+  // The comments written for a task on one day, joined.
+  function notesOn(t,ds){
+    return logOf(t).filter(function(e){
+      return e.kind==="note" && e.date===ds && (e.text||"").trim();
+    }).map(function(e){ return e.text.trim(); }).join("; ");
+  }
+
+  function reportLines(ds){
+    return shown(byDate(ds)).filter(function(t){
+      return t.status==="done" || t.status==="notdone" || notesOn(t,ds);
+    }).map(function(t){
+      var n=notesOn(t,ds);
+      return " -"+t.title+(t.status==="notdone" ? " (not done)" : "")+(n ? "("+n+")" : "");
+    });
+  }
+
+  function todoLines(ds){
+    var prev=iso(shift(parse(ds),-1));
+    return shown(tasks.filter(function(t){
+      return open_(t) && (onDay(t,ds) || dueOn(t,prev));
+    })).map(function(t){ return " -"+t.title; });
+  }
+
+  function reportDays(){
+    if(view==="day") return [iso(cursor)];
+    var days=[], i;
+    if(view==="week"){
+      var m=mondayOf(cursor);
+      for(i=0;i<7;i++) days.push(iso(shift(m,i)));
+    } else {
+      var first=new Date(cursor.getFullYear(),cursor.getMonth(),1);
+      var n=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate();
+      for(i=0;i<n;i++) days.push(iso(shift(first,i)));
+    }
+    return days;
+  }
+
+  function reportText(){
+    var days=reportDays(), blocks=[];
+    days.forEach(function(ds){
+      var L=reportLines(ds);
+      if(!L.length && view!=="day") return;    // a week or month skips its empty days
+      blocks.push(mdy(ds)+" Report\r\n\r\n"+(L.length ? L.join("\r\n") : " -nothing"));
+    });
+    var next=nextDay(days[days.length-1]), T=todoLines(next);
+    blocks.push(mdy(next)+"  Todo\r\n\r\n"+(T.length ? T.join("\r\n") : " -nothing"));
+    return blocks.join("\r\n"+SEP+"\r\n")+"\r\n";
+  }
+
+  function fileName(){
+    if(view==="day") return "schedule-"+iso(cursor)+".txt";
+    if(view==="week") return "schedule-week-"+iso(mondayOf(cursor))+".txt";
+    return "schedule-"+cursor.getFullYear()+"-"+String(cursor.getMonth()+1).padStart(2,"0")+".txt";
+  }
+
+  document.getElementById("saveTxt").addEventListener("click",function(){
+    var blob=new Blob([reportText()],{type:"text/plain;charset=utf-8"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download=fileName();
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  });
+
+  function render(){
+    if(tip) tip.classList.remove("on");   // a hover card from the Month view must not outlive it
+    if(view==="day") renderDay(); else if(view==="week") renderWeek(); else renderMonth();
+    heading(); renderSide();
+    document.getElementById("statCount").textContent=tasks.length;
+  }
+
+  /* The two date boxes follow whichever day you are looking at until you set
+     one yourself; adding a task hands them back. */
+  var newStart=document.getElementById("newStart"),
+      newEnd=document.getElementById("newEnd"),
+      spanTouched=false;
+
+  function defaultDay(){ return view==="day" ? iso(cursor) : todayIso(); }
+  function resetSpan(){
+    var d=defaultDay();
+    newStart.value=d; newEnd.value=d; spanTouched=false;
+  }
+  newStart.addEventListener("change",function(){
+    spanTouched=true;
+    if(!newStart.value) newStart.value=defaultDay();
+    if(newEnd.value<newStart.value) newEnd.value=newStart.value;
+  });
+  newEnd.addEventListener("change",function(){
+    spanTouched=true;
+    if(!newEnd.value) newEnd.value=newStart.value||defaultDay();
+    if(newEnd.value<newStart.value) newStart.value=newEnd.value;
+  });
+
+  function addTask(){
+    var v=input.value.trim();
+    if(!v){showErr("Type something first");input.focus();return;}
+    clearErr();
+    var ag=document.getElementById("newAgent");
+    var now=new Date();
+    var start=newStart.value||defaultDay();
+    var end=newEnd.value||start;
+    if(end<start) end=start;
+    var repeat=newRepeat.value||"";
+    var t={id:"t"+Date.now()+Math.floor(Math.random()*1000),title:v,
+      date:start,end:end,status:"todo",
+      agent:ag.checked,category:parseInt(document.getElementById("newCat").value,10)||0,log:[],
+      createdAt:iso(now)+" "+clock(now),finishedAt:"",
+      repeat:repeat,series:"",repeatedThrough:""};
+    tasks.push(t);
+    input.value=""; ag.checked=false; newRepeat.value=""; resetSpan(); render(); input.focus();
+    // A repeating task's later days are made by the server: fetch them.
+    push(api.create(t).then(function(){ return repeat ? sync() : null; }));
+  }
+  var newRepeat=document.getElementById("newRepeat");
+  fillRepeat(newRepeat);
+  document.getElementById("add").addEventListener("click",addTask);
+  input.addEventListener("keydown",function(e){if(e.key==="Enter")addTask();});
+  input.addEventListener("input",clearErr);
+
+  /* detail sheet */
+  var detail=document.getElementById("detail"), editing=null, editLog=[];
+  var dTitle=document.getElementById("dTitle"), dNote=document.getElementById("dNote"),
+      dStatus=document.getElementById("dStatus"), dDate=document.getElementById("dDate"),
+      dStamp=document.getElementById("dStamp"), dNoteLabel=document.getElementById("dNoteLabel"),
+      dHist=document.getElementById("dHist"), dEnd=document.getElementById("dEnd"),
+      dRepeat=document.getElementById("dRepeat"), dRepeatField=document.getElementById("dRepeatField"),
+      dSeries=document.getElementById("dSeries");
+  fillRepeat(dRepeat);
+
+  dDate.addEventListener("change",function(){
+    if(dEnd.value && dEnd.value<dDate.value) dEnd.value=dDate.value;
+  });
+  dEnd.addEventListener("change",function(){
+    if(dEnd.value && dEnd.value<dDate.value) dDate.value=dEnd.value;
+  });
+
+  dStatus.innerHTML=COLS.map(function(c){
+    return '<option value="'+c.key+'">'+c.label+'</option>';}).join("");
+
+  function historyHtml(l){
+    if(!l.length) return '<p class="histempty">Nothing written yet. Comments you add '+
+      'appear here, one line per day, and stay with the task as it moves.</p>';
+    return l.map(function(e,i){
+      var day='<span class="evday">'+esc(dayLabel(e.date))+'</span>';
+      var del='<button class="evdel" data-del="'+i+'" title="Remove this entry" '+
+        'aria-label="Remove this entry">&#215;</button>';
+      var text=(e.text||"").trim();
+      if(e.kind==="carry"||e.kind==="move"){
+        return '<div class="ev moved">'+day+'<span class="evtxt"><em>'+
+          (e.kind==="carry"?"Carried over":"Moved")+
+          (e.from?" from "+esc(dayLabel(e.from)):"")+'</em>'+
+          (text?'<span class="evnote">'+esc(text)+'</span>':'')+'</span>'+del+'</div>';
+      }
+      var at=(e.at||"").length>11?'<span class="evat">'+esc(e.at.slice(11))+'</span>':'';
+      return '<div class="ev">'+day+'<span class="evtxt">'+esc(text)+at+'</span>'+del+'</div>';
+    }).join("");
+  }
+
+  function drawHistory(){
+    dHist.innerHTML=historyHtml(editLog);
+    dHist.scrollTop=dHist.scrollHeight;   // the newest day is the one you want
+  }
+
+  /* Entries are removed from a working copy, so Cancel really does cancel. */
+  dHist.addEventListener("click",function(e){
+    var b=e.target.closest("[data-del]"); if(!b) return;
+    editLog.splice(+b.getAttribute("data-del"),1);
+    drawHistory();
+  });
+
+  function openDetail(id,focusNote){
+    var t=find(id); if(!t) return;
+    editing=id;
+    editLog=logOf(t).map(function(e){
+      return {kind:e.kind,date:e.date,at:e.at,text:e.text,from:e.from,status:e.status};
+    });
+    dTitle.value=t.title;
+    dNote.value="";                       // always blank: it adds a day, it does not edit one
+    dStatus.value=t.status;
+    dDate.value=t.date;
+    dEnd.value=endOf(t);
+    document.getElementById("dAgent").checked=!!t.agent;
+    document.getElementById("dCat").value=String(catOf(t));
+    dRepeat.value=t.repeat||"";
+    dRepeatField.hidden=!!t.series;
+    if(t.series){
+      var head=find(t.series), info=repeatInfo(ruleOf(t));
+      dSeries.innerHTML="One day of a repeating task"+(info?" ("+info.label.toLowerCase()+")":"")+
+        (head?'. <a href="#" data-open="'+esc(head.id)+'">Open the first one</a> to change the rule or stop it.'
+             :". The first one has been deleted, so this is on its own now.");
+      dSeries.hidden=false;
+    } else if(t.repeat){
+      var planned=tasks.filter(function(x){ return x.series===t.id && x.date>todayIso(); }).length;
+      dSeries.textContent="Repeats "+repeatInfo(t.repeat).label.toLowerCase()+
+        (planned?" \u00b7 "+planned+" more day"+(planned===1?"":"s")+" planned ahead":"")+
+        ". Changing the title, category or rule here changes the planned days too; Once stops it.";
+      dSeries.hidden=false;
+    } else {
+      dSeries.hidden=true;
+    }
+    dNoteLabel.textContent = t.status==="notdone" ? "Why not \u2014 added to today"
+      : t.status==="done" ? "How it went \u2014 added to today"
+      : "Add a comment for today";
+
+    var days=countKind(t,"carry"), notes=countKind(t,"note"), bits=[];
+    if(spans(t)) bits.push(dayCount(t.date,endOf(t))+" days, "+rangeLabel(t));
+    if(days) bits.push("Carried over "+days+" time"+(days===1?"":"s"));
+    bits.push(notes+(notes===1?" comment":" comments"));
+    if(t.createdAt) bits.push("added "+t.createdAt);
+    dStamp.textContent=bits.join(" \u00b7 ");
+
+    drawHistory();
+    detail.classList.add("on");
+    (focusNote?dNote:dTitle).focus();
+  }
+  function closeDetail(){detail.classList.remove("on");editing=null;editLog=[];}
+
+  document.getElementById("dSave").addEventListener("click",function(){
+    var t=find(editing); if(!t) return closeDetail();
+    var title=dTitle.value.trim();
+    if(!title){dTitle.focus();return;}
+
+    var prevStatus=t.status, prevDate=t.date, prevRepeat=t.repeat||"";
+    var dest=dDate.value||t.date, added=dNote.value.trim();
+    var destEnd=dEnd.value||dest;
+    if(destEnd<dest) destEnd=dest;
+
+    t.title=title;
+    t.status=dStatus.value;
+    t.agent=document.getElementById("dAgent").checked;
+    t.category=parseInt(document.getElementById("dCat").value,10)||0;
+    if(!t.series) t.repeat=dRepeat.value||"";
+    if(t.status!==prevStatus) stampFinish(t);
+
+    t.log=editLog;                        // deletions made in the sheet land here
+    t.end=destEnd;                        // stretching the run is a plan edit, not an event
+    if(dest!==prevDate){
+      t.date=dest;
+      addLog(t,entry("move",dest,"",prevDate,t.status));
+    }
+    if(added) addLog(t,entry("note",todayIso(),added,"",t.status));
+
+    /* A head's planned days follow it. A new rule (or Once) drops the ones
+       nobody has touched and, if there is still a rule, the server plans
+       afresh from today. Otherwise they take the head's new title, category
+       and agent flag. */
+    var drop=[], follow=[];
+    if(t.repeat!==prevRepeat){
+      drop=futureUntouched(t.id);
+      t.repeatedThrough="";
+    } else if(t.repeat){
+      futureUntouched(t.id).forEach(function(x){
+        var ch=false;
+        if(x.title!==t.title){ x.title=t.title; ch=true; }
+        if(x.category!==t.category){ x.category=t.category; ch=true; }
+        if(!!x.agent!==!!t.agent){ x.agent=t.agent; ch=true; }
+        if(ch) follow.push(x);
+      });
+    }
+    if(drop.length) tasks=tasks.filter(function(x){ return drop.indexOf(x)<0; });
+
+    closeDetail(); render();
+    follow.forEach(function(x){ push(api.update(x)); });
+    push(Promise.all(drop.map(function(x){ return api.remove(x.id); }))
+      .then(function(){ return api.update(t); })
+      .then(function(){ return t.repeat && t.repeat!==prevRepeat ? sync() : null; }));
+  });
+  dSeries.addEventListener("click",function(e){
+    var a=e.target.closest("[data-open]"); if(!a) return;
+    e.preventDefault();
+    var id=a.getAttribute("data-open");
+    closeDetail(); openDetail(id,false);
+  });
+  document.getElementById("dCancel").addEventListener("click",closeDetail);
+  document.getElementById("dDelete").addEventListener("click",function(){
+    var id=editing;
+    closeDetail();
+    deleteTask(id);
+  });
+
+  /* Deleting is immediate, with a few seconds to take it back: Undo puts the
+     same task, history and all, back into the database. */
+  var toast=document.getElementById("toast"), toastTimer=null, undoFn=null;
+  function showUndo(text,fn){
+    document.getElementById("toastText").textContent=text;
+    undoFn=fn;
+    toast.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(hideUndo,8000);
+  }
+  function hideUndo(){ toast.classList.remove("on"); undoFn=null; }
+  document.getElementById("toastUndo").addEventListener("click",function(){
+    var fn=undoFn; hideUndo(); if(fn) fn();
+  });
+
+  function deleteTask(id){
+    var t=find(id); if(!t) return;
+    var gone=[t].concat(t.repeat ? futureUntouched(id) : []);
+    var copies=gone.map(function(x){ return JSON.parse(JSON.stringify(x)); });
+    tasks=tasks.filter(function(x){ return gone.indexOf(x)<0; });
+    render();
+    gone.forEach(function(x){ push(api.remove(x.id)); });
+    var name=copy_(t.title), extra=gone.length-1;
+    showUndo("Deleted \u201c"+name+"\u201d"+(extra?" and "+extra+" planned day"+(extra===1?"":"s"):""),function(){
+      copies.forEach(function(c){
+        if(find(c.id)) return;
+        tasks.push(c); push(api.create(c));
+      });
+      render();
+    });
+  }
+  function copy_(title){ return title.length>40 ? title.slice(0,40)+"\u2026" : title; }
+
+  // The same change a drag makes, for the card menu and the number keys.
+  function setStatus(t,key){
+    if(!t || t.status===key) return;
+    t.status=key; stampFinish(t);
+    push(api.update(t));
+    render();
+    if(prefs.ask&&(key==="done"||key==="notdone")) openDetail(t.id,true);
+  }
+  function setCategory(t,k){
+    if(!t || catOf(t)===k) return;
+    t.category=k;
+    push(api.update(t));
+    render();
+  }
+  dNote.addEventListener("keydown",function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key==="Enter") document.getElementById("dSave").click();
+  });
+  /* Clicking outside or Escape closes the sheet only if nothing typed would be
+     lost; otherwise the Save and Cancel buttons are pointed out instead. */
+  function detailDirty(){
+    var t=find(editing);
+    return !!t && (dNote.value.trim()!=="" || dTitle.value.trim()!==t.title);
+  }
+  function softCloseDetail(){
+    if(!detail.classList.contains("on")) return;
+    if(!detailDirty()){ closeDetail(); return; }
+    var save=document.getElementById("dSave");
+    save.focus();
+    save.animate && save.animate([{transform:"scale(1)"},{transform:"scale(1.08)"},{transform:"scale(1)"}],{duration:260});
+  }
+  detail.addEventListener("click",function(e){if(e.target===detail)softCloseDetail();});
+
+  /* navigation */
+  function setView(v){
+    view=v;
+    Array.prototype.forEach.call(document.querySelectorAll("#views button"),function(b){
+      b.setAttribute("aria-current",b.getAttribute("data-view")===v?"true":"false");});
+    render();
+  }
+  document.getElementById("views").addEventListener("click",function(e){
+    var b=e.target.closest("[data-view]"); if(b) setView(b.getAttribute("data-view"));});
+  document.getElementById("prev").addEventListener("click",function(){
+    cursor = view==="month" ? new Date(cursor.getFullYear(),cursor.getMonth()-1,1)
+      : shift(cursor, view==="week"?-7:-1); render();});
+  document.getElementById("next").addEventListener("click",function(){
+    cursor = view==="month" ? new Date(cursor.getFullYear(),cursor.getMonth()+1,1)
+      : shift(cursor, view==="week"?7:1); render();});
+  document.getElementById("jumpDate").addEventListener("change",function(e){
+    if(!e.target.value) return;
+    cursor=parse(e.target.value);
+    render();
+  });
+
+  document.getElementById("today").addEventListener("click",function(){
+    goToday(); render();});
+
+  var searchBox=document.getElementById("search");
+  searchBox.addEventListener("input",function(){
+    var q=searchBox.value.trim().toLowerCase();
+    if(q===query) return;
+    query=q; render();
+  });
+  // Escape clears the search and hands focus back to the board.
+  searchBox.addEventListener("keydown",function(e){
+    if(e.key!=="Escape") return;
+    e.stopPropagation();
+    if(searchBox.value){ searchBox.value=""; query=""; render(); }
+    else searchBox.blur();
+  });
+
+  /* month hover card */
+  var tip=document.getElementById("tip");
+
+  function tipHtml(ds){
+    var d=parse(ds);
+    var list=shown(byDate(ds)).sort(function(a,b){
+      return COLS.map(function(c){return c.key;}).indexOf(a.status)
+           - COLS.map(function(c){return c.key;}).indexOf(b.status);
+    });
+    var head='<h4>'+DAYS[(d.getDay()+6)%7]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+'</h4>';
+    if(!list.length) return head+'<p class="none">Nothing planned.</p>';
+    return head+list.map(function(t){
+      var c=TINT[t.status];
+      var fin=t.finishedAt?' '+t.finishedAt.slice(11):'';
+      var n=lastNote(t), days=countKind(t,"carry");
+      return '<div class="trow"><span class="pip" style="background:'+c.bar+'"></span><span>'+
+        (t.agent?'<span class="agent">agent</span>':'')+esc(t.title)+
+        '<span class="st"> \u00b7 '+esc(catName(catOf(t)))+' \u00b7 '+c.label+fin+
+          (spans(t)?' \u00b7 day '+dayCount(t.date,ds)+" of "+dayCount(t.date,endOf(t)):'')+
+          (days?' \u00b7 carried '+days+'\u00d7':'')+'</span>'+
+        (n?'<br><span class="st">'+esc(n)+'</span>':'')+
+        '</span></div>';
+    }).join("");
+  }
+
+  function placeTip(e){
+    var pad=14, w=tip.offsetWidth, h=tip.offsetHeight;
+    var x=e.clientX+pad, y=e.clientY+pad;
+    if(x+w>window.innerWidth-8) x=e.clientX-w-pad;
+    if(y+h>window.innerHeight-8) y=Math.max(8,e.clientY-h-pad);
+    tip.style.left=x+"px"; tip.style.top=y+"px";
+  }
+
+  stage.addEventListener("mouseover",function(e){
+    if(view!=="month") return;
+    var cell=e.target.closest(".mcell");
+    if(!cell) return;
+    tip.innerHTML=tipHtml(cell.getAttribute("data-jump"));
+    tip.classList.add("on");
+    placeTip(e);
+  });
+  stage.addEventListener("mousemove",function(e){
+    if(tip.classList.contains("on")) placeTip(e);
+  });
+  stage.addEventListener("mouseout",function(e){
+    var cell=e.target.closest(".mcell");
+    if(cell && !cell.contains(e.relatedTarget)) tip.classList.remove("on");
+  });
+  stage.addEventListener("mouseleave",function(){ tip.classList.remove("on"); });
+  stage.addEventListener("scroll",function(){ tip.classList.remove("on"); });
+
+  ["agentBody","sideBody"].forEach(function(id){
+    document.getElementById(id).addEventListener("click",function(e){
+      var row=e.target.closest("[data-open]");
+      if(row) openDetail(row.getAttribute("data-open"),false);
+    });
+  });
+  if(darkMQ){
+    var redraw=function(){ render(); };
+    if(darkMQ.addEventListener) darkMQ.addEventListener("change",redraw); else if(darkMQ.addListener) darkMQ.addListener(redraw);
+  }
+
+  stage.addEventListener("click",function(e){
+    var jump=e.target.closest("[data-jump]");
+    if(jump){cursor=parse(jump.getAttribute("data-jump"));setView("day");}
+  });
+
+  /* pointer drag with a click threshold */
+  var pend=null, drag=null, THRESHOLD=4;
+
+  stage.addEventListener("pointerdown",function(e){
+    if(e.button!==0) return;
+    var card=e.target.closest(".card"); if(!card) return;
+    e.preventDefault();
+    card.setPointerCapture(e.pointerId);
+    pend={card:card,x:e.clientX,y:e.clientY,id:card.getAttribute("data-id")};
+  });
+
+  function begin(e){
+    var card=pend.card;
+    var cr=card.getBoundingClientRect(), sr=stage.getBoundingClientRect();
+    var ph=document.createElement("div");
+    ph.className="ghost"; ph.style.height=cr.height+"px";
+    card.parentNode.insertBefore(ph,card);
+    var zones=Array.prototype.map.call(stage.querySelectorAll("[data-col],[data-col-date]"),
+      function(z){return {el:z,rect:z.getBoundingClientRect()};});
+    drag={card:card,ph:ph,sr:sr,zones:zones,id:pend.id,
+          dx:pend.x-cr.left,dy:pend.y-cr.top};
+    card.classList.add("flying");
+    stage.classList.add("dragging");
+    card.style.width=cr.width+"px";
+    stage.appendChild(card);
+  }
+
+  function zoneAt(e){
+    for(var i=0;i<drag.zones.length;i++){
+      var r=drag.zones[i].rect;
+      if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom)
+        return drag.zones[i].el;
+    }
+    return null;
+  }
+
+  function place(e){
+    drag.card.style.left=Math.round(e.clientX-drag.sr.left-drag.dx+stage.scrollLeft)+"px";
+    drag.card.style.top=Math.round(e.clientY-drag.sr.top-drag.dy+stage.scrollTop)+"px";
+    var over=zoneAt(e);
+    drag.zones.forEach(function(z){z.el.classList.toggle("over",z.el===over);});
+  }
+
+  stage.addEventListener("pointermove",function(e){
+    if(drag){place(e);return;}
+    if(!pend) return;
+    if(Math.abs(e.clientX-pend.x)>THRESHOLD||Math.abs(e.clientY-pend.y)>THRESHOLD){
+      begin(e); place(e);
+    }
+  });
+
+  function finish(e){
+    if(drag){
+      var zone=zoneAt(e), id=drag.id;
+      drag.card.classList.remove("flying");
+      drag.card.style.width=""; drag.card.style.left=""; drag.card.style.top="";
+      drag.ph.remove();
+      var zones=drag.zones; drag=null; pend=null;
+      stage.classList.remove("dragging");
+      zones.forEach(function(z){z.el.classList.remove("over");});
+      var moved=false, t=find(id);
+      if(zone&&t){
+        if(zone.hasAttribute("data-col")){
+          var next=zone.getAttribute("data-col"), cat=+zone.getAttribute("data-cat")||0;
+          moved = next!==t.status;
+          t.status=next;
+          t.category=cat;
+          if(moved) stampFinish(t);
+        } else {
+          var to=zone.getAttribute("data-col-date");
+          if(zone.hasAttribute("data-cat")) t.category=+zone.getAttribute("data-cat")||0;
+          if(to!==t.date){
+            // The run keeps its length and re-anchors on the day it landed on.
+            var was=t.date, len=dayCount(t.date,endOf(t));
+            t.date=to;
+            t.end=iso(shift(parse(to),len-1));
+            addLog(t,entry("move",to,"",was,t.status));
+          }
+        }
+        push(api.update(t));
+      }
+      render();
+      if(moved&&prefs.ask&&t&&(t.status==="done"||t.status==="notdone")) openDetail(id,true);
+      return;
+    }
+    if(pend){ var clicked=pend.id; pend=null; openDetail(clicked,false); }
+  }
+  stage.addEventListener("pointerup",finish);
+  stage.addEventListener("pointercancel",function(){ 
+    if(drag){ drag.card.classList.remove("flying"); drag.ph.remove(); drag=null; stage.classList.remove("dragging"); render(); }
+    pend=null;
+  });
+
+  /* ---------- end of day ----------
+
+     Two different things get asked here, and a task is only ever in one of
+     them. A task whose last day this is has run out of time, so it needs a
+     verdict: done, not done, or carried on. A task still in the middle of its
+     run needs no verdict - it needs a line about the day, and that line is not
+     optional, which is what keeps a week-long task from arriving on Friday
+     with nothing to show for Monday to Thursday.
+
+     mode "closeout" asks both. mode "progress" asks only for the day's
+     comments, so that opening Schedule in the morning does not start by
+     demanding to know whether today went well. */
+
+  var wrap=document.getElementById("wrap"), wDate=null, wMode="closeout";
+  var runNotes={};      // typed day-comments, kept across redraws of the list
+  var dueDrafts={};     // comments typed against a task not yet settled, kept until it is
+
+  // Out of time on this day: the last day of the run, still unfinished.
+  function dueTasks(ds){
+    return tasks.filter(function(t){ return dueOn(t,ds) && open_(t); });
+  }
+  // Running through this day with days left to go.
+  function runningTasks(ds){
+    return tasks.filter(function(t){
+      return open_(t) && onDay(t,ds) && !dueOn(t,ds);
+    });
+  }
+
+  function nameHtml(t){
+    var days=countKind(t,"carry");
+    return '<span class="wname">'+
+      (t.agent?'<span class="agent">agent</span>':'')+esc(t.title)+
+      '<small>'+esc(catName(catOf(t)))+' \u00b7 '+TINT[t.status].label+
+      (spans(t)?' <span class="wday">\u00b7 day '+dayCount(t.date,wDate)+" of "+
+        dayCount(t.date,endOf(t))+'</span>':'')+
+      (days?" \u00b7 carried over "+days+"\u00d7":"")+
+      (t.createdAt?" \u00b7 added "+t.createdAt.slice(11):"")+
+      '</small></span>';
+  }
+
+  function dueRow(t){
+    return '<div class="wline">'+
+      '<div class="wtop">'+nameHtml(t)+
+      '<button class="pick d" data-mark="done" data-id="'+t.id+'">Done</button>'+
+      '<button class="pick n" data-mark="notdone" data-id="'+t.id+'">Not done</button>'+
+      '<button class="pick c" data-mark="carry" data-id="'+t.id+'">Carry</button>'+
+      '</div>'+
+      '<input class="wnote" type="text" autocomplete="off" data-note="'+t.id+'" '+
+      'value="'+esc(dueDrafts[t.id]||"")+'" '+
+      'aria-label="Comment" placeholder="Comment (optional) \u2014 kept with the task">'+
+      '</div>';
+  }
+
+  function runRow(t){
+    var need=needsComment(t,wDate), typed=runNotes[t.id]||"";
+    return '<div class="wline">'+
+      '<div class="wtop">'+nameHtml(t)+'</div>'+
+      '<input class="wnote'+(need&&!typed.trim()?" need":"")+'" type="text" '+
+      'autocomplete="off" data-run="'+t.id+'"'+(need?' data-need="1"':'')+' '+
+      'value="'+esc(typed)+'" aria-label="Comment for this day" '+
+      'placeholder="'+(need?"What happened with this today?":"Add another line (optional)")+'">'+
+      '</div>';
+  }
+
+  function drawWrap(){
+    var due = wMode==="closeout" ? dueTasks(wDate) : [];
+    var run = runningTasks(wDate);
+    if(wMode!=="closeout") run=run.filter(function(t){ return needsComment(t,wDate); });
+
+    document.getElementById("wTitle").textContent =
+      wMode==="closeout"
+        ? (wDate===todayIso() ? "Close out today" : "Close out "+dayLabel(wDate))
+        : (wDate===todayIso() ? "Today so far" : dayLabel(wDate));
+
+    var hint;
+    if(due.length && run.length){
+      hint = due.length+(due.length===1?" task is":" tasks are")+" out of days, and "+
+        run.length+(run.length===1?" is":" are")+" still running.";
+    } else if(due.length){
+      hint = due.length+(due.length===1?" task is":" tasks are")+" still open. Move each one.";
+    } else if(run.length){
+      hint = "Say where "+(run.length===1?"this one has":"these have")+
+        " got to. One line each is enough.";
+    } else {
+      hint = "Everything is accounted for.";
+    }
+    document.getElementById("wHint").textContent=hint;
+
+    document.getElementById("wBulk").style.display = due.length ? "flex" : "none";
+    document.getElementById("wList").innerHTML = due.map(dueRow).join("");
+
+    document.getElementById("wRunWrap").hidden = !run.length;
+    document.getElementById("wRunHead").innerHTML =
+      "Still running \u00b7 <em>a comment for "+esc(dayLabel(wDate))+"</em>";
+    document.getElementById("wRun").innerHTML = run.map(runRow).join("");
+
+    syncFoot();
+  }
+
+  // The sheet will not close while a running task still owes this day a line.
+  function owed(){
+    var n=0;
+    Array.prototype.forEach.call(wrap.querySelectorAll("[data-need]"),function(el){
+      if(!el.value.trim()) n++;
+    });
+    return n;
+  }
+
+  function syncFoot(){
+    var n=owed(), b=document.getElementById("wClose");
+    b.disabled = n>0;
+    document.getElementById("wFoot").textContent =
+      n>0 ? n+(n===1?" comment still needed":" comments still needed")+" \u2014 or Later" : "";
+  }
+
+  wrap.addEventListener("input",function(e){
+    var el=e.target;
+    if(el.hasAttribute("data-note")){ dueDrafts[el.getAttribute("data-note")]=el.value; return; }
+    if(!el.hasAttribute("data-run")) return;
+    runNotes[el.getAttribute("data-run")]=el.value;
+    if(el.value.trim()) el.classList.remove("need");
+    syncFoot();
+  });
+
+  function openWrap(ds,mode){
+    wDate=ds||iso(cursor);
+    wMode=mode||"closeout";
+    runNotes={};
+    wrap.classList.add("on");
+    drawWrap();
+  }
+
+  // Read before drawWrap() runs: redrawing the list destroys these inputs.
+  function wNote(id){
+    var el=wrap.querySelector('[data-note="'+id+'"]');
+    return el ? el.value.trim() : "";
+  }
+
+  /* "done"/"notdone" settle the task where it is; "carry" gives it another
+     day. Either way whatever was typed is filed under the day being closed. */
+  function settle(t,choice,note){
+    if(choice==="carry"){
+      var to=carryDest(wDate), was=endOf(t);
+      // Only the last day moves: the first day is where the work started.
+      if(t.date===endOf(t)) t.date=to;
+      t.end=to;
+      addLog(t,entry("carry",to,note,was,t.status));
+      return;
+    }
+    t.status=choice;
+    stampFinish(t);
+    if(note) addLog(t,entry("note",wDate,note,"",t.status));
+  }
+
+  // Everything typed against a still-running task is filed under wDate.
+  function commitRunNotes(){
+    var saved=[];
+    Array.prototype.forEach.call(wrap.querySelectorAll("[data-run]"),function(el){
+      var text=el.value.trim();
+      if(!text) return;
+      var t=find(el.getAttribute("data-run"));
+      if(!t) return;
+      addLog(t,entry("note",wDate,text,"",t.status));
+      saved.push(t);
+    });
+    runNotes={};
+    saved.forEach(function(t){ push(api.update(t)); });
+    return saved.length;
+  }
+
+  /* Close is the deliberate way out: it files what was typed, then lets
+     carrying pick up whatever was left unresolved. It is only enabled once
+     every owed comment is written, so the follow-on prompt cannot loop. */
+  function closeWrap(){
+    commitRunNotes();
+    wrap.classList.remove("on");
+    render();
+    sync().then(promptToday).catch(function(){});
+  }
+  document.getElementById("wClose").addEventListener("click",closeWrap);
+  document.getElementById("wLater").addEventListener("click",dismissWrap);
+
+  /* Clicking away or pressing Escape abandons what was typed. Carrying still
+     runs - that is the whole point of it - but nothing is asked again now, or
+     dismissing a prompt you owe comments to would reopen it immediately. */
+  function dismissWrap(){
+    // Comments already typed are kept: running-task lines are saved now, and
+    // lines against unsettled tasks wait in dueDrafts for the next time.
+    commitRunNotes();
+    wrap.classList.remove("on");
+    render();
+    sync().catch(function(){});
+  }
+
+  wrap.addEventListener("click",function(e){
+    if(e.target===wrap){ dismissWrap(); return; }
+    var b=e.target.closest("[data-mark]");
+    if(!b) return;
+    var id=b.getAttribute("data-id"), t=find(id);
+    if(t){
+      settle(t,b.getAttribute("data-mark"),wNote(id));
+      delete dueDrafts[id];
+      push(api.update(t));
+    }
+    drawWrap(); render();
+  });
+
+  function bulk(choice){
+    var hit=dueTasks(wDate);
+    var notes=hit.map(function(t){ return wNote(t.id); });
+    hit.forEach(function(t,i){ settle(t,choice,notes[i]); delete dueDrafts[t.id]; });
+    drawWrap(); render();
+    hit.forEach(function(t){ push(api.update(t)); });
+  }
+  document.getElementById("wAllDone").addEventListener("click",function(){bulk("done");});
+  document.getElementById("wAllNot").addEventListener("click",function(){bulk("notdone");});
+  document.getElementById("wAllCarry").addEventListener("click",function(){bulk("carry");});
+
+  /* settings */
+  var scrim=document.getElementById("settings");
+  var optAsk=document.getElementById("optAsk"), optCarry=document.getElementById("optCarry");
+  optAsk.addEventListener("change",function(){prefs.ask=optAsk.checked;push(api.putPrefs());});
+  document.getElementById("openSettings").addEventListener("click",function(){scrim.classList.add("on");});
+  document.getElementById("closeSettings").addEventListener("click",function(){scrim.classList.remove("on");});
+  scrim.addEventListener("click",function(e){if(e.target===scrim)scrim.classList.remove("on");});
+  document.addEventListener("keydown",function(e){
+    if(e.key!=="Escape") return;
+    if(menu.classList.contains("on")){ closeMenu(); return; }
+    scrim.classList.remove("on");
+    softCloseDetail();
+    if(wrap.classList.contains("on")) dismissWrap();
+  });
+
+  /* ---------- card menu (right-click) ---------- */
+  var menu=document.getElementById("menu"), menuFor=null, menuReturn=null;
+  function openMenu(id,x,y){
+    var t=find(id); if(!t) return;
+    menuFor=id; menuReturn=document.activeElement;
+    var html='<div class="mhead2">'+esc(t.title.length>34?t.title.slice(0,34)+"\u2026":t.title)+'</div>';
+    html+=COLS.map(function(c,i){
+      return '<button role="menuitemradio" aria-checked="'+(t.status===c.key)+'" data-mstatus="'+c.key+'">'+
+        '<span class="mpip" style="background:'+c.bar+'"></span>'+c.label+'<span class="mkey">'+(i+1)+'</span></button>';
+    }).join("");
+    html+='<hr><div class="mhead2">Category</div>';
+    html+=cats().map(function(c){
+      var on=catOf(t)===c.id;
+      return '<button role="menuitemradio" aria-checked="'+on+'" data-mcat="'+c.id+'">'+
+        (on?"\u2713 ":"\u2003")+esc(c.name)+'</button>';
+    }).join("");
+    html+='<hr><button role="menuitem" data-mopen="1">Open\u2026<span class="mkey">Enter</span></button>'+
+      '<button role="menuitem" class="danger" data-mdel="1">Delete<span class="mkey">Del</span></button>';
+    menu.innerHTML=html;
+    menu.classList.add("on");
+    var w=menu.offsetWidth, h=menu.offsetHeight;
+    menu.style.left=Math.max(6,Math.min(x,window.innerWidth-w-6))+"px";
+    menu.style.top=Math.max(6,Math.min(y,window.innerHeight-h-6))+"px";
+    var first=menu.querySelector("button"); if(first) first.focus();
+  }
+  function closeMenu(){
+    menu.classList.remove("on"); menuFor=null;
+    if(menuReturn && document.body.contains(menuReturn)) menuReturn.focus();
+    menuReturn=null;
+  }
+  menu.addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b) return;
+    var t=find(menuFor), id=menuFor;
+    menuReturn=null; closeMenu();
+    if(!t) return;
+    if(b.hasAttribute("data-mstatus")) setStatus(t,b.getAttribute("data-mstatus"));
+    else if(b.hasAttribute("data-mcat")) setCategory(t,+b.getAttribute("data-mcat"));
+    else if(b.hasAttribute("data-mopen")) openDetail(id,false);
+    else if(b.hasAttribute("data-mdel")) deleteTask(id);
+  });
+  menu.addEventListener("keydown",function(e){
+    if(e.key!=="ArrowDown"&&e.key!=="ArrowUp") return;
+    e.preventDefault();
+    var items=Array.prototype.slice.call(menu.querySelectorAll("button"));
+    var i=items.indexOf(document.activeElement);
+    i = e.key==="ArrowDown" ? (i+1)%items.length : (i-1+items.length)%items.length;
+    items[i].focus();
+  });
+  stage.addEventListener("contextmenu",function(e){
+    var card=e.target.closest(".card"); if(!card) return;
+    e.preventDefault();
+    openMenu(card.getAttribute("data-id"),e.clientX,e.clientY);
+  });
+  document.addEventListener("pointerdown",function(e){
+    if(menu.classList.contains("on") && !menu.contains(e.target)) closeMenu();
+  },true);
+  window.addEventListener("resize",function(){ if(menu.classList.contains("on")) closeMenu(); });
+  stage.addEventListener("scroll",function(){ if(menu.classList.contains("on")) closeMenu(); });
+
+  /* ---------- keyboard ----------
+     Board keys work whenever you are not typing and no sheet is open. On a
+     focused card, Enter opens it, 1-4 set its column and Delete removes it
+     (with Undo). */
+  function refocus(id){
+    var el=stage.querySelector('.card[data-id="'+id+'"]');
+    if(el) el.focus();
+  }
+  document.addEventListener("keydown",function(e){
+    if(e.ctrlKey||e.metaKey||e.altKey) return;
+    if(menu.classList.contains("on") || document.querySelector(".scrim.on")) return;
+    var tag=(e.target.tagName||"").toLowerCase();
+    if(tag==="input"||tag==="textarea"||tag==="select") return;
+
+    var card=e.target.closest ? e.target.closest(".card") : null;
+    if(card){
+      var id=card.getAttribute("data-id"), t=find(id);
+      if(e.key==="Enter"){ e.preventDefault(); openDetail(id,false); return; }
+      if(e.key>="1"&&e.key<="4"){ e.preventDefault(); setStatus(t,COLS[+e.key-1].key); if(!detail.classList.contains("on")) refocus(id); return; }
+      if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); deleteTask(id); return; }
+      if(e.key==="ContextMenu"||(e.shiftKey&&e.key==="F10")){
+        e.preventDefault(); var r=card.getBoundingClientRect(); openMenu(id,r.left+12,r.bottom-4); return;
+      }
+    }
+    var lane=e.target.closest ? e.target.closest("[data-lane]") : null;
+    if(lane && (e.key==="Enter"||e.key===" ")){
+      e.preventDefault(); var k=lane.getAttribute("data-lane"); toggleRow(k);
+      var again=stage.querySelector('[data-lane="'+k+'"]'); if(again) again.focus();
+      return;
+    }
+    switch(e.key){
+      case "n": case "N": e.preventDefault(); input.focus(); break;
+      case "/": case "f": case "F": e.preventDefault(); searchBox.focus(); searchBox.select(); break;
+      case "t": case "T": goToday(); render(); break;
+      case "d": case "D": setView("day"); break;
+      case "w": case "W": setView("week"); break;
+      case "m": case "M": setView("month"); break;
+      case "ArrowLeft": document.getElementById("prev").click(); break;
+      case "ArrowRight": document.getElementById("next").click(); break;
+    }
+  });
+
+  document.getElementById("wipe").addEventListener("click",function(){
+    if(window.confirm("Delete every task? This cannot be undone.")){
+      tasks=[];render();scrim.classList.remove("on");push(api.wipe());}});
+
+  optCarry.addEventListener("change",function(e){
+    prefs.carry=e.target.checked;
+    var saved=api.putPrefs();
+    push(saved);
+    // Only after the server knows, or the sync would read the old setting.
+    if(e.target.checked) saved.then(sync).catch(function(){});
+  });
+
+  /* Categories: rename in place, add up to twelve, delete any but the last.
+     Deleting moves that row's tasks to the first remaining row, with Undo. */
+  function fillCatSelect(sel){
+    var v=parseInt(sel.value,10);
+    sel.innerHTML=cats().map(function(c){
+      return '<option value="'+c.id+'">'+esc(c.name)+'</option>';
+    }).join("");
+    sel.value=String(catById(v) ? v : cats()[0].id);
+  }
+  var catList=document.getElementById("catList");
+  function showCategories(){
+    var list=cats();
+    catList.innerHTML=list.map(function(c){
+      return '<div class="catline"><input type="text" maxlength="40" data-catname="'+c.id+'" value="'+esc(c.name)+'" '+
+        'aria-label="Category name">'+
+        '<button class="catdel" data-catdel="'+c.id+'" title="Delete this category" aria-label="Delete '+esc(c.name)+'"'+
+        (list.length<2?" disabled":"")+'>&#215;</button></div>';
+    }).join("");
+    document.getElementById("catAdd").disabled = list.length>=MAX_CATS;
+    fillCatSelect(document.getElementById("newCat"));
+    fillCatSelect(document.getElementById("dCat"));
+  }
+  function saveCategories(next){
+    prefs.categories=next;
+    showCategories(); render();
+    return api.putPrefs();
+  }
+  catList.addEventListener("change",function(e){
+    var box=e.target.closest("[data-catname]"); if(!box) return;
+    var id=+box.getAttribute("data-catname"), name=box.value.trim();
+    if(!name || name===catName(id)){ box.value=catName(id); return; }
+    push(saveCategories(cats().map(function(c){ return c.id===id ? {id:c.id,name:name} : c; })));
+  });
+  catList.addEventListener("keydown",function(e){
+    if(e.key==="Enter" && e.target.matches("[data-catname]")) e.target.blur();
+  });
+  document.getElementById("catAdd").addEventListener("click",function(){
+    var list=cats(); if(list.length>=MAX_CATS) return;
+    var id=Math.max.apply(null,list.map(function(c){ return c.id; }).concat([-1]))+1;
+    push(saveCategories(list.concat([{id:id,name:"New category"}])));
+    var box=catList.querySelector('[data-catname="'+id+'"]');
+    if(box){ box.focus(); box.select(); }
+  });
+  catList.addEventListener("click",function(e){
+    var b=e.target.closest("[data-catdel]"); if(!b) return;
+    var list=cats(); if(list.length<2) return;
+    var id=+b.getAttribute("data-catdel"), pos=-1;
+    list.forEach(function(c,i){ if(c.id===id) pos=i; });
+    var gone=list[pos], rest=list.filter(function(c){ return c.id!==id; }), to=rest[0].id;
+    var moved=tasks.filter(function(t){ return catOf(t)===id; }).map(function(t){ return t.id; });
+    moved.forEach(function(tid){ find(tid).category=to; });
+    push(saveCategories(rest).then(function(){ return moved.length ? api.recategorize(moved,to) : null; }));
+    showUndo("Deleted \u201c"+gone.name+"\u201d"+(moved.length ? " \u2014 "+moved.length+" task"+(moved.length===1?"":"s")+
+      " moved to "+rest[0].name : ""),function(){
+      var back=cats().slice(); back.splice(Math.min(pos,back.length),0,gone);
+      moved.forEach(function(tid){ var t=find(tid); if(t) t.category=id; });
+      push(saveCategories(back).then(function(){ return moved.length ? api.recategorize(moved,id) : null; }));
+    });
+  });
+  showCategories();   // the defaults, until the saved names arrive
+
+  /* The deadline. The server watches the clock, because the window may be
+     closed to the tray when the time comes: it brings the window up and holds
+     the day for the page, which picks it up here. */
+  function hhmm(h,m){ return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"); }
+
+  var optDeadline=document.getElementById("optDeadline");
+  function showDeadline(){
+    var list=[""];
+    for(var h=0;h<24;h++){ list.push(hhmm(h,0)); list.push(hhmm(h,30)); }
+    // A time saved some other way still shows as itself.
+    if(prefs.deadline && list.indexOf(prefs.deadline)<0){ list.push(prefs.deadline); list.sort(); }
+    optDeadline.innerHTML=list.map(function(v){
+      return '<option value="'+v+'">'+(v||"Off")+'</option>';
+    }).join("");
+    optDeadline.value=prefs.deadline||"";
+  }
+  optDeadline.addEventListener("change",function(){
+    prefs.deadline=optDeadline.value||"";
+    push(api.putPrefs());
+  });
+
+  var optDayStart=document.getElementById("optDayStart");
+  function showDayStart(){
+    var html="";
+    for(var h=0;h<24;h++) html+='<option value="'+h+'">'+hhmm(h,0)+'</option>';
+    optDayStart.innerHTML=html;
+    optDayStart.value=String(prefs.dayStart||0);
+  }
+  optDayStart.addEventListener("change",function(){
+    var wasToday=iso(cursor)===todayIso();
+    prefs.dayStart=+optDayStart.value||0;
+    lastSeenDay=todayIso();
+    if(wasToday) goToday();
+    render();
+    var saved=api.putPrefs();
+    push(saved);
+    // Carrying works from the server's idea of today, which just moved.
+    saved.then(sync).catch(function(){});
+  });
+
+  var loaded=false, heldAlert="";
+  function checkAlert(){
+    if(!loaded) return;
+    api.alert().then(function(r){
+      if(r.day) heldAlert=r.day;
+      // Someone else changed the board: take their copy, once this page's
+      // own writes are through.
+      if(r.rev>lastRev && !pending){
+        lastRev=r.rev;
+        return refresh();
+      }
+    }).then(function(){
+      // A close-out waits until no other sheet is in the way.
+      if(!heldAlert || document.querySelector(".scrim.on")) return;
+      var d=heldAlert; heldAlert="";
+      if(d===todayIso()){ goToday(); render(); }
+      openWrap(d,"closeout");
+    }).catch(function(){});
+  }
+  window.setInterval(checkAlert, 5000);
+
+  // refresh takes the board and settings as they now are on the server.
+  function refresh(){
+    return api.getPrefs().then(function(p){
+      applyPrefs(p);
+      return reload();
+    }).then(function(){
+      showInfo("The board was changed elsewhere and has been reloaded.");
+    });
+  }
+
+  api.info().then(function(r){
+    document.getElementById("whereStored").textContent="Saved in "+r.database;
+    document.getElementById("reveal").hidden=!r.file;
+  }).catch(function(){});
+  document.getElementById("reveal").addEventListener("click",function(){
+    req("POST","/api/reveal").catch(function(e){ showErr(e.message); });
+  });
+
+  /* Backup: the whole board as one file, and back again. */
+  document.getElementById("exportBtn").addEventListener("click",function(){
+    fetch("/api/export").then(function(res){
+      if(!res.ok) throw new Error("could not build the backup");
+      var name=(res.headers.get("Content-Disposition")||"").match(/filename="([^"]+)"/);
+      return res.blob().then(function(blob){
+        var url=URL.createObjectURL(blob), a=document.createElement("a");
+        a.href=url; a.download=name?name[1]:"schedule-backup.json";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      });
+    }).catch(function(e){ showErr(e.message); });
+  });
+  var importFile=document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click",function(){ importFile.value=""; importFile.click(); });
+  importFile.addEventListener("change",function(){
+    var f=importFile.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var doc;
+      try{ doc=JSON.parse(rd.result); }catch(e){ showErr("\u201c"+f.name+"\u201d is not a Schedule backup"); return; }
+      if(!doc || !Array.isArray(doc.tasks)){ showErr("\u201c"+f.name+"\u201d is not a Schedule backup"); return; }
+      if(!window.confirm("Replace the "+tasks.length+" task"+(tasks.length===1?"":"s")+" on this board with the "+
+        doc.tasks.length+" in \u201c"+f.name+"\u201d?\n\nA copy of the current board is kept in the backups folder first.")) return;
+      fetch("/api/import",{method:"POST",headers:{"Content-Type":"application/json"},body:rd.result})
+        .then(function(res){
+          if(!res.ok) return res.json().catch(function(){return {};}).then(function(j){ throw new Error(j.error||"restore failed"); });
+          location.reload();
+        }).catch(function(e){ showErr(e.message); });
+    };
+    rd.readAsText(f);
+  });
+
+  /* Updates. The server does the checking; this shows what it found. */
+  var updStatus=document.getElementById("updateStatus"), updNow=document.getElementById("updateNow"),
+      updCheck=document.getElementById("checkUpdate");
+  function showUpdate(u){
+    document.getElementById("aboutVersion").textContent=u.version;
+    updNow.hidden=true; updCheck.disabled=false;
+    if(!u.enabled){ updStatus.textContent="Updates are not set up for this build."; updCheck.disabled=true; return; }
+    if(u.status==="downloading"){ updStatus.textContent="Downloading "+(u.latest||"the update")+"\u2026"; updCheck.disabled=true; return; }
+    if(u.status==="installing"){ updStatus.textContent="Setup is running. It closes Schedule, puts "+(u.ready||u.latest)+" in its place and starts it again."; updCheck.disabled=true; return; }
+    if(u.error){ updStatus.textContent=u.error; return; }
+    if(u.ready){
+      updStatus.textContent=u.ready+" is downloaded and verified. It installs on its own "+
+        (u.windowOpen ? "when you close this window, or at the next start" : "in a moment")+
+        (u.notes?" \u2014 "+u.notes:"")+".";
+      updNow.hidden=false;
+      return;
+    }
+    if(!u.checkedAt){ updStatus.textContent="Not checked yet."; return; }
+    if(u.newer){
+      updStatus.textContent=u.latest+" is available and will be downloaded shortly"+(u.notes?" \u2014 "+u.notes:"")+".";
+      updNow.hidden=false;
+    } else {
+      updStatus.textContent="Up to date. Checked "+u.checkedAt.slice(11)+".";
+    }
+  }
+  function loadUpdate(){ return req("GET","/api/update").then(showUpdate).catch(function(){}); }
+  updCheck.addEventListener("click",function(){
+    updStatus.textContent="Checking\u2026"; updCheck.disabled=true;
+    req("POST","/api/update").then(showUpdate).catch(function(e){ updStatus.textContent=e.message; updCheck.disabled=false; });
+  });
+  updNow.addEventListener("click",function(){
+    updNow.hidden=true;
+    req("POST","/api/update/install").then(function(u){
+      showUpdate(u);
+      var poll=setInterval(function(){
+        req("GET","/api/update").then(function(u){ showUpdate(u); if(u.status!=="downloading") clearInterval(poll); })
+          .catch(function(){ clearInterval(poll); });
+      },1000);
+    }).catch(function(e){ showErr(e.message); });
+  });
+  document.getElementById("openSettings").addEventListener("click",loadUpdate);
+  loadUpdate();
+
+  document.getElementById("doExit").addEventListener("click",function(){
+    api.quit().catch(function(){}).then(function(){ window.close(); });
+  });
+
+  /* sync rolls unfinished work forward and takes the board the server hands
+     back. The server owns the decision because it holds the preference, so
+     this is also the ordinary way to reload. Resolves with how many moved. */
+  function reload(){
+    return api.list().then(function(rows){ tasks=rows; render(); });
+  }
+
+  function sync(){
+    return api.carry().then(function(r){
+      tasks=r.tasks;
+      render();
+      if(r.moved) showInfo(r.moved+(r.moved===1?" unfinished task was":
+        " unfinished tasks were")+" carried over to today.");
+      return r.moved;
+    });
+  }
+
+  /* First load. Nothing is drawn until the database has answered, so the
+     board never flashes empty. Preferences come first: sync depends on them. */
+  function applyPrefs(p){
+    prefs = p;
+    optAsk.checked = p.ask;
+    optCarry.checked = p.carry;
+    showDeadline();
+    showDayStart();
+    showCategories();
+  }
+
+  api.getPrefs().then(function(p){
+    applyPrefs(p);
+    goToday();
+    lastSeenDay=todayIso();   // or the day-change watcher would see a false rollover
+    return reload();
+  }).then(function(){
+    loaded=true;
+    input.focus();
+    /* The board is drawn from what is actually stored, before anything is
+       carried, so a task that ran out of days yesterday is still sitting on
+       yesterday when it is put to you. Carrying happens once you are done
+       with the sheet - that is what closeWrap and dismissWrap do. */
+    if(promptRollover()) return;
+    return sync().then(promptToday).then(checkAlert);
+  }).catch(function(err){
+    showErr("Could not reach the Schedule server: "+err.message);
+  });
+
+  // Days that have been and gone with work still open on them.
+  function staleDays(){
+    var t=todayIso(), seen={}, days=[];
+    tasks.forEach(function(x){
+      var e=endOf(x);
+      if(e<t && open_(x) && !seen[e]){ seen[e]=1; days.push(e); }
+    });
+    return days.sort();
+  }
+
+  // The most recent day that was never closed out. True if it opened a sheet.
+  function promptRollover(){
+    if(wrap.classList.contains("on")) return false;
+    var days=staleDays();
+    if(!days.length) return false;
+    openWrap(days[days.length-1],"closeout");
+    return true;
+  }
+
+  /* A task in the middle of its run owes today a line. Asking on every start
+     is the point: that is what "a comment day by day" means. */
+  function promptToday(){
+    if(wrap.classList.contains("on")) return false;
+    var t=todayIso();
+    var owing=runningTasks(t).filter(function(x){ return needsComment(x,t); });
+    if(!owing.length) return false;
+    openWrap(t,"progress");
+    return true;
+  }
+
+  var lastSeenDay=todayIso();
+
+  window.setInterval(function(){
+    var now=todayIso();
+    if(now===lastSeenDay) return;
+    var previous=lastSeenDay;
+    lastSeenDay=now;
+    if(iso(cursor)===previous){ goToday(); }
+    render();
+    // Same order at midnight: yesterday gets closed out before it is carried.
+    if(dueTasks(previous).length){ openWrap(previous,"closeout"); return; }
+    sync().then(promptToday).catch(function(){ /* the status line says so */ });
+  }, 20000);
+
+})();
+</script>
+</body>
+</html>
