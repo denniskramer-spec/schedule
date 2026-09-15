@@ -25,7 +25,7 @@ import (
 
    Schedule asks a web address for a small file that names the newest version:
 
-       {"version": "2.7", "file": "Schedule-Setup.exe", "sha256": "...", "notes": "What changed"}
+       {"version": "2.9", "file": "Schedule-Setup.exe", "sha256": "...", "notes": "What changed"}
 
    "file" is resolved against that address, so both files sit in one folder
    on any web host - GitHub Releases, a static site, a shared drive over
@@ -44,7 +44,7 @@ import (
    runs silently, replaces this copy and starts it again. Settings shows what
    is going on, and Update now installs immediately instead of waiting. */
 
-// version is stamped in by the build ("-X main.version=2.7"); a bare
+// version is stamped in by the build ("-X main.version=2.9"); a bare
 // "go build" gets "dev", which never updates.
 var version = "dev"
 
