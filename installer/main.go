@@ -220,19 +220,33 @@ func install() {
 }
 
 // closeRunning asks a running Schedule to exit through its own quit endpoint,
-// the same one the power button in the app uses, and gives it a moment to let
-// go of its exe. If nothing is listening this returns straight away.
+// the same one the power button in the app uses, then waits until it has
+// really gone: as long as the old copy answers on its port, a new copy
+// started now would take it for a running Schedule and step aside, and
+// nothing would be left running. If nothing is listening this returns
+// straight away.
 func closeRunning() {
+	const addr = "http://127.0.0.1:8765"
 	client := &http.Client{Timeout: 2 * time.Second}
-	resp, err := client.Post("http://127.0.0.1:8765/api/quit", "application/json", nil)
-	if err != nil {
-		return
+	if resp, err := client.Post(addr+"/api/quit", "application/json", nil); err == nil {
+		resp.Body.Close()
+		if auto {
+			setupLog("asked the running copy to quit")
+		}
 	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return
+	probe := &http.Client{Timeout: 500 * time.Millisecond}
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		resp, err := probe.Get(addr + "/api/prefs")
+		if err != nil {
+			return // nothing answering: it has gone
+		}
+		resp.Body.Close()
+		time.Sleep(250 * time.Millisecond)
 	}
-	time.Sleep(1500 * time.Millisecond)
+	if auto {
+		setupLog("the old copy is still answering after 30s; going ahead anyway")
+	}
 }
 
 /* ---------- uninstall ---------- */

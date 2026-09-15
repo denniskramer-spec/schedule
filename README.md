@@ -68,7 +68,7 @@ somewhere Schedule can fetch them over https — a GitHub release, a static
 site, a shared folder served by a web server. `./build.sh installer` writes
 `latest.json` next to the setup, ready to upload:
 
-    {"version": "2.5", "file": "Schedule-Setup.exe", "sha256": "…", "notes": "What changed"}
+    {"version": "2.6", "file": "Schedule-Setup.exe", "sha256": "…", "notes": "What changed"}
 
 `file` is resolved relative to where `latest.json` lives. `sha256` is the
 setup's digest: the download is checked against it before it is run, and a

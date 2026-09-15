@@ -25,7 +25,7 @@ import (
 
    Schedule asks a web address for a small file that names the newest version:
 
-       {"version": "2.5", "file": "Schedule-Setup.exe", "sha256": "...", "notes": "What changed"}
+       {"version": "2.6", "file": "Schedule-Setup.exe", "sha256": "...", "notes": "What changed"}
 
    "file" is resolved against that address, so both files sit in one folder
    on any web host - GitHub Releases, a static site, a shared drive over
@@ -44,7 +44,7 @@ import (
    runs silently, replaces this copy and starts it again. Settings shows what
    is going on, and Update now installs immediately instead of waiting. */
 
-// version is stamped in by the build ("-X main.version=2.5"); a bare
+// version is stamped in by the build ("-X main.version=2.6"); a bare
 // "go build" gets "dev", which never updates.
 var version = "dev"
 
@@ -342,7 +342,11 @@ func (s *server) installReady(quiet bool) error {
 	if s.windowOpen == nil || !s.windowOpen() {
 		args = append(args, "-tray")
 	}
-	log.Printf("installing Schedule %s%s", st.Version, map[bool]string{true: " on its own", false: ""}[quiet])
+	if quiet {
+		log.Printf("installing Schedule %s on its own", st.Version)
+	} else {
+		log.Printf("installing Schedule %s", st.Version)
+	}
 	os.Remove(stagedPath()) // if Setup fails, the next check stages it again
 	cmd := exec.Command(st.Path, args...)
 	if err := cmd.Start(); err != nil {
@@ -352,6 +356,14 @@ func (s *server) installReady(quiet bool) error {
 		return err
 	}
 	go cmd.Wait()
+	// Get out of Setup's way at once rather than waiting to be asked: Setup
+	// still asks, and then waits until this copy has really gone before it
+	// starts the new one, so the two never overlap.
+	go func() {
+		time.Sleep(700 * time.Millisecond)
+		log.Print("quitting for the update")
+		s.requestQuit()
+	}()
 	return nil
 }
 

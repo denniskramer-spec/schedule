@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -31,12 +32,13 @@ var staticFS embed.FS
 var appDir string
 
 type server struct {
-	db      Store
-	origin  []string // allowed Origin header values
-	quit    chan struct{}
-	show    func()        // brings the app window up; see tray.go
-	alert   alert         // a deadline close-out waiting for the page; see deadline.go
-	recheck chan struct{} // prods the deadline watcher after a settings change
+	db       Store
+	origin   []string // allowed Origin header values
+	quit     chan struct{}
+	quitOnce sync.Once
+	show     func()        // brings the app window up; see tray.go
+	alert    alert         // a deadline close-out waiting for the page; see deadline.go
+	recheck  chan struct{} // prods the deadline watcher after a settings change
 
 	upd       updater // the update check; see update.go
 	chg       changes // the change number pages reload on; see refresh.go
@@ -825,12 +827,14 @@ func (s *server) quitHandler(w http.ResponseWriter, r *http.Request) {
 	// Let the response reach the browser before the listener closes.
 	go func() {
 		time.Sleep(150 * time.Millisecond)
-		select {
-		case <-s.quit:
-		default:
-			close(s.quit)
-		}
+		s.requestQuit()
 	}()
+}
+
+// requestQuit starts the shutdown, once; main takes it from there.
+func (s *server) requestQuit() {
+	s.stopping()
+	s.quitOnce.Do(func() { close(s.quit) })
 }
 
 // recategorizeHandler moves tasks to another category in one go: the tasks of
