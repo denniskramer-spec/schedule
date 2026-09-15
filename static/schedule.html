@@ -2176,7 +2176,7 @@
     if(!u.enabled){ updStatus.textContent="Updates are not set up for this build."; updCheck.disabled=true; return; }
     if(u.status==="downloading"){ updStatus.textContent="Downloading "+(u.latest||"the update")+"\u2026"; updCheck.disabled=true; return; }
     if(u.status==="installing"){ updStatus.textContent="Setup is running. It closes Schedule, puts "+(u.ready||u.latest)+" in its place and starts it again."; updCheck.disabled=true; return; }
-    if(u.error){ updStatus.textContent=u.error; return; }
+    if(u.error){ updStatus.textContent=u.error; updNow.hidden=!u.ready; return; }
     if(u.ready){
       updStatus.textContent=u.ready+" is downloaded and verified. It installs on its own "+
         (u.windowOpen ? "when you close this window, or at the next start" : "in a moment")+

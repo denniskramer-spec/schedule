@@ -59,6 +59,10 @@ anyone clicking anything:
 
 Setup runs silently, closes the old copy, replaces it and starts the new one
 where the old one was — in the tray, or on screen. Your tasks are not touched.
+What it did is written to `%APPDATA%\Schedule\setup.log`, next to the app's
+own log; if Setup is stopped the moment it starts — Windows Security does
+that to unsigned programs now and then — Settings says so and offers Update
+now again.
 **Settings › About** shows the version and what is going on, and **Update
 now** installs a downloaded update immediately instead of waiting. A
 notification says when an update is ready and waiting for the window.
@@ -68,7 +72,7 @@ somewhere Schedule can fetch them over https — a GitHub release, a static
 site, a shared folder served by a web server. `./build.sh installer` writes
 `latest.json` next to the setup, ready to upload:
 
-    {"version": "2.6", "file": "Schedule-Setup.exe", "sha256": "…", "notes": "What changed"}
+    {"version": "2.7", "file": "Schedule-Setup.exe", "sha256": "…", "notes": "What changed"}
 
 `file` is resolved relative to where `latest.json` lives. `sha256` is the
 setup's digest: the download is checked against it before it is run, and a

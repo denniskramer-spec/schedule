@@ -10,7 +10,7 @@
 
 BINARY := schedule.exe
 SETUP  := Schedule-Setup.exe
-VERSION := 2.6
+VERSION := 2.7
 # Where latest.json is published (https); stamped into the exe when set.
 UPDATE_URL ?= https://github.com/denniskramer-spec/schedule/releases/latest/download/latest.json
 
@@ -29,8 +29,9 @@ installer: windows
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
 	  go build -trimpath -ldflags="-s -w -H windowsgui -X main.version=$(VERSION)" \
 	  -o $(SETUP) ./installer/
-	@printf '{"version": "%s", "file": "Schedule-Setup.exe", "sha256": "%s", "notes": "%s"}\n' \
-	  "$(VERSION)" "$$(sha256sum $(SETUP) | cut -d' ' -f1)" "$(NOTES)" > latest.json
+	@NOTES="$(NOTES)" VERSION="$(VERSION)" SUM="$$(sha256sum $(SETUP) | cut -d' ' -f1)" python3 -c 'import json,os;print(json.dumps({ \
+	  "version": os.environ["VERSION"], "file": "Schedule-Setup.exe", \
+	  "sha256": os.environ["SUM"], "notes": os.environ["NOTES"]}))' > latest.json
 	@ls -lh $(SETUP) latest.json
 
 test:

@@ -25,7 +25,7 @@ import (
 
    Schedule asks a web address for a small file that names the newest version:
 
-       {"version": "2.6", "file": "Schedule-Setup.exe", "sha256": "...", "notes": "What changed"}
+       {"version": "2.7", "file": "Schedule-Setup.exe", "sha256": "...", "notes": "What changed"}
 
    "file" is resolved against that address, so both files sit in one folder
    on any web host - GitHub Releases, a static site, a shared drive over
@@ -44,7 +44,7 @@ import (
    runs silently, replaces this copy and starts it again. Settings shows what
    is going on, and Update now installs immediately instead of waiting. */
 
-// version is stamped in by the build ("-X main.version=2.6"); a bare
+// version is stamped in by the build ("-X main.version=2.7"); a bare
 // "go build" gets "dev", which never updates.
 var version = "dev"
 
@@ -355,14 +355,30 @@ func (s *server) installReady(quiet bool) error {
 		s.upd.mu.Unlock()
 		return err
 	}
-	go cmd.Wait()
 	// Get out of Setup's way at once rather than waiting to be asked: Setup
 	// still asks, and then waits until this copy has really gone before it
-	// starts the new one, so the two never overlap.
+	// starts the new one, so the two never overlap. Setup takes seconds, so
+	// one that is gone within the first moment did not get to work - most
+	// likely Windows Security stopped it - and that is reported instead.
+	died := make(chan error, 1)
+	go func() { died <- cmd.Wait() }()
 	go func() {
-		time.Sleep(700 * time.Millisecond)
-		log.Print("quitting for the update")
-		s.requestQuit()
+		select {
+		case err := <-died:
+			msg := "Setup stopped as soon as it started"
+			if err != nil {
+				msg += " (" + err.Error() + ")"
+			}
+			msg += ". Windows Security may have blocked it: check Protection history, then try Update now again."
+			log.Print("update: " + msg)
+			s.upd.mu.Lock()
+			s.upd.status, s.upd.err = "ready", msg
+			s.upd.mu.Unlock()
+			st.save() // keep it staged: the marker was removed above
+		case <-time.After(1500 * time.Millisecond):
+			log.Print("quitting for the update")
+			s.requestQuit()
+		}
 	}()
 	return nil
 }

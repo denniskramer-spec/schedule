@@ -8,7 +8,8 @@
 // It is built with -H windowsgui: there is no console window, and every
 // question is a standard Windows message box (see ui_windows.go). With -auto
 // there are no questions at all: that is how Schedule updates itself, and
-// anything worth saying goes to setup.log in the install folder instead.
+// anything worth saying goes to setup.log next to the app's own log, under
+// %APPDATA%\Schedule, instead.
 // -tray with it starts the new copy in the notification area, where the old
 // one was.
 //
@@ -57,12 +58,31 @@ func main() {
 			tray = true
 		}
 	}
+	if auto {
+		// The first thing written, so a Setup that got this far leaves a trace
+		// even if nothing after it works.
+		setupLog("Setup %s started with %v, from %s", version, os.Args[1:], selfPath())
+	}
 	install()
 }
 
-// setupLog is where -auto reports, since it shows nothing.
+func selfPath() string {
+	p, err := os.Executable()
+	if err != nil {
+		return "?"
+	}
+	return p
+}
+
+// setupLog is where -auto reports, since it shows nothing: setup.log in the
+// app's own folder, which exists on any machine Schedule has run on.
 func setupLog(format string, args ...any) {
-	f, err := os.OpenFile(filepath.Join(installDir(), "setup.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	dir := profileDir()
+	if dir == "" {
+		return
+	}
+	os.MkdirAll(dir, 0o755)
+	f, err := os.OpenFile(filepath.Join(dir, "setup.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		return
 	}
@@ -137,6 +157,9 @@ func install() {
 	// A running copy holds a lock on its own file. Ask it to quit, then write
 	// the new exe in a way that still works if it did not.
 	closeRunning()
+	if auto {
+		setupLog("replacing %s", exe)
+	}
 	if err := writeFile(exe, payload); err != nil {
 		die("Could not write %s\n\n%v\n\n"+
 			"If %s is running, close its window and run Setup again.", exe, err, appName)
