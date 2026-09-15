@@ -84,7 +84,9 @@ func (w *window) open() bool {
 	return w.cmd != nil
 }
 
-// close shuts the window, if one is open, as Schedule quits.
+// close shuts the window, if one is open: as Schedule quits, or to leave it
+// in the tray (the hide button in the app). Its watcher in show tells the
+// two apart by the quitting flag.
 func (w *window) close() {
 	w.mu.Lock()
 	defer w.mu.Unlock()

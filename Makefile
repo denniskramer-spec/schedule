@@ -10,7 +10,7 @@
 
 BINARY := schedule.exe
 SETUP  := Schedule-Setup.exe
-VERSION := 2.7
+VERSION := 2.8
 # Where latest.json is published (https); stamped into the exe when set.
 UPDATE_URL ?= https://github.com/denniskramer-spec/schedule/releases/latest/download/latest.json
 
